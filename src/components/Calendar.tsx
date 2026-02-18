@@ -16,12 +16,14 @@ export default function Calendar() {
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [selectedHabitId, setSelectedHabitId] = useState<string | 'all'>('all');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const todayStr = getToday();
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
 
   const prevMonth = () => {
+    setSelectedDate(null);
     if (viewMonth === 0) {
       setViewMonth(11);
       setViewYear(viewYear - 1);
@@ -31,6 +33,7 @@ export default function Calendar() {
   };
 
   const nextMonth = () => {
+    setSelectedDate(null);
     if (viewMonth === 11) {
       setViewMonth(0);
       setViewYear(viewYear + 1);
@@ -166,9 +169,11 @@ export default function Calendar() {
           const status = isFuture ? 'future' : getCompletionStatus(dateStr);
 
           return (
-            <div
+            <button
               key={day}
-              className={`aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition ${
+              disabled={isFuture}
+              onClick={() => !isFuture && setSelectedDate(selectedDate === dateStr ? null : dateStr)}
+              className={`aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition cursor-pointer disabled:cursor-default ${
                 status === 'all'
                   ? 'bg-green-100 border-2 border-green-400'
                   : status === 'partial'
@@ -176,7 +181,9 @@ export default function Calendar() {
                     : status === 'none'
                       ? 'bg-gray-50 border border-gray-200'
                       : 'bg-white border border-gray-100'
-              } ${isToday ? 'ring-2 ring-purple-500 ring-offset-1' : ''}`}
+              } ${isToday ? 'ring-2 ring-purple-500 ring-offset-1' : ''} ${
+                selectedDate === dateStr ? 'ring-2 ring-blue-500 ring-offset-1' : ''
+              }`}
             >
               <span
                 className={`text-xs font-semibold ${
@@ -190,10 +197,85 @@ export default function Calendar() {
                   {status === 'all' ? '✓' : status === 'partial' ? '·' : ''}
                 </span>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {/* Selected Date Detail */}
+      {selectedDate && (
+        <div className="mt-6 bg-white border-2 border-blue-200 rounded-2xl p-5 animate-fade-in">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg text-gray-900">
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </h3>
+            <button
+              onClick={() => setSelectedDate(null)}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 text-lg cursor-pointer"
+            >
+              ×
+            </button>
+          </div>
+          {(() => {
+            const completedHabits = habits.filter((h) =>
+              h.completionDates.includes(selectedDate)
+            );
+            const missedHabits = habits.filter(
+              (h) => !h.completionDates.includes(selectedDate) && h.createdAt.split('T')[0] <= selectedDate
+            );
+
+            return (
+              <div className="space-y-3">
+                {completedHabits.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-green-600 mb-2">
+                      Completed ({completedHabits.length})
+                    </p>
+                    <div className="space-y-2">
+                      {completedHabits.map((h) => (
+                        <div
+                          key={h.id}
+                          className="flex items-center gap-3 px-3 py-2 bg-green-50 rounded-xl"
+                        >
+                          <span className="text-xl">{h.emoji}</span>
+                          <span className="font-medium text-gray-800">{h.name}</span>
+                          <span className="ml-auto text-green-500 text-sm font-semibold">✓</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {missedHabits.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-400 mb-2">
+                      Missed ({missedHabits.length})
+                    </p>
+                    <div className="space-y-2">
+                      {missedHabits.map((h) => (
+                        <div
+                          key={h.id}
+                          className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl"
+                        >
+                          <span className="text-xl opacity-50">{h.emoji}</span>
+                          <span className="font-medium text-gray-400">{h.name}</span>
+                          <span className="ml-auto text-gray-300 text-sm">—</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {completedHabits.length === 0 && missedHabits.length === 0 && (
+                  <p className="text-gray-400 text-center py-4">No habits tracked on this day</p>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Monthly Stats */}
       <div className="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6">

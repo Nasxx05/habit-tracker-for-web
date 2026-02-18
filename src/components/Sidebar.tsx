@@ -11,20 +11,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
 
-  const handleExport = () => {
-    const data = {
-      habits,
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handleNav = (view: 'dashboard' | 'calendar') => {
     setCurrentView(view);
     onClose();
@@ -61,12 +47,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             className="w-full text-left px-4 py-3 rounded-xl hover:bg-purple-50 transition font-medium text-gray-700 cursor-pointer"
           >
             📅 Calendar History
-          </button>
-          <button
-            onClick={handleExport}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-purple-50 transition font-medium text-gray-700 cursor-pointer"
-          >
-            📤 Export Data
           </button>
         </nav>
 
