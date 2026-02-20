@@ -81,9 +81,13 @@ export default function Dashboard() {
             {/* Profile picture — tap to go to profile */}
             <button
               onClick={() => setCurrentView('profile')}
-              className="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-lg cursor-pointer hover:ring-2 hover:ring-sage transition"
+              className="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-lg cursor-pointer hover:ring-2 hover:ring-sage transition overflow-hidden"
             >
-              👤
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                '👤'
+              )}
             </button>
             <div>
               <p className="text-sm text-muted">{greeting.text}</p>

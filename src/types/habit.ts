@@ -25,6 +25,7 @@ export interface UserProfile {
   name: string;
   tagline: string;
   joinDate: string;
+  avatar: string; // base64 data URL or empty string
 }
 
 export interface Milestone {

@@ -50,6 +50,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     name: 'User',
     tagline: '',
     joinDate: new Date().toISOString(),
+    avatar: '',
   });
   const [reflections, setReflections] = useLocalStorage<Reflection[]>('reflections', []);
   const [milestones, setMilestones] = useLocalStorage<Milestone[]>('milestones', DEFAULT_MILESTONES);

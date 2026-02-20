@@ -1,10 +1,36 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
 
 export default function Profile() {
   const { habits, profile, updateProfile, milestones, setCurrentView } = useHabits();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return; // max 2MB
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 200;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        updateProfile({ avatar: canvas.toDataURL('image/jpeg', 0.8) });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
@@ -33,28 +59,37 @@ export default function Profile() {
   return (
     <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
       {/* Top Bar */}
-      <div className="px-4 py-4 flex items-center justify-between">
+      <div className="px-4 py-4">
         <h1 className="text-2xl font-bold text-dark">Profile</h1>
-        <button
-          onClick={() => setCurrentView('home')}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-mint transition text-muted cursor-pointer"
-        >
-          ⚙️
-        </button>
       </div>
 
       {/* Profile Card */}
       <section className="px-4 pt-2">
         <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
           <div className="relative inline-block">
-            <div className="w-20 h-20 rounded-full bg-mint flex items-center justify-center text-4xl mx-auto">
-              👤
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarPick}
+              className="hidden"
+            />
+            {profile.avatar ? (
+              <img
+                src={profile.avatar}
+                alt="Profile"
+                className="w-20 h-20 rounded-full object-cover mx-auto"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-mint flex items-center justify-center text-4xl mx-auto">
+                👤
+              </div>
+            )}
             <button
-              onClick={() => setEditingName(true)}
-              className="absolute -bottom-1 -right-1 w-7 h-7 bg-sage rounded-full flex items-center justify-center text-white text-xs shadow-md cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-sage rounded-full flex items-center justify-center text-white text-xs shadow-md cursor-pointer hover:bg-forest transition"
             >
-              ✏️
+              📷
             </button>
           </div>
           {editingName ? (
