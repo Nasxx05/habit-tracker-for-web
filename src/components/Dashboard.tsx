@@ -7,7 +7,7 @@ import AddHabitModal from './AddHabitModal';
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function Dashboard() {
-  const { habits, completedToday, totalHabits, profile, setCurrentView } = useHabits();
+  const { habits, completedToday, totalHabits, profile, setCurrentView, toggleHabit } = useHabits();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
@@ -43,17 +43,19 @@ export default function Dashboard() {
   const todayStr = formatDate(today);
   const isViewingToday = selectedDate === todayStr;
 
-  // Generate 3 weeks of dates: 2 weeks back + this week forward
-  const dates = Array.from({ length: 21 }).map((_, i) => {
+  // Generate 6 weeks of dates: 4 weeks back + 2 weeks forward
+  const dates = Array.from({ length: 42 }).map((_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 14 + i);
+    d.setDate(today.getDate() - 28 + i);
     const dateStr = formatDate(d);
     return {
       label: DAY_LABELS[d.getDay()],
       date: d.getDate(),
+      month: d.toLocaleDateString('en-US', { month: 'short' }),
       dateStr,
       isToday: dateStr === todayStr,
       isSelected: dateStr === selectedDate,
+      isFirstOfMonth: d.getDate() === 1,
     };
   });
 
@@ -95,22 +97,23 @@ export default function Dashboard() {
       <section className="px-4 pt-3 pb-1">
         <div
           ref={scrollRef}
-          className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar scroll-smooth"
+          className="flex gap-1 overflow-x-auto pb-2 hide-scrollbar scroll-smooth snap-x snap-mandatory"
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
         >
           {dates.map((d) => (
             <div
               key={d.dateStr}
               ref={d.isToday ? todayRef : undefined}
               onClick={() => setSelectedDate(d.dateStr)}
-              className={`flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 px-1 transition ${
-                d.isSelected ? '' : 'opacity-70 hover:opacity-100'
+              className={`flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 px-2 py-1.5 rounded-xl snap-center transition-all ${
+                d.isSelected ? 'bg-mint scale-105' : 'opacity-70 hover:opacity-100 active:scale-95'
               }`}
             >
-              <span className="text-xs text-muted font-medium">{d.label}</span>
+              <span className="text-[10px] text-muted font-medium">{d.label}</span>
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition ${
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                   d.isSelected
-                    ? 'bg-forest text-white'
+                    ? 'bg-forest text-white shadow-md shadow-forest/20'
                     : d.isToday
                     ? 'ring-2 ring-forest text-forest'
                     : 'text-dark hover:bg-mint'
@@ -118,6 +121,9 @@ export default function Dashboard() {
               >
                 {d.date}
               </div>
+              {d.isFirstOfMonth && (
+                <span className="text-[9px] text-sage font-semibold">{d.month}</span>
+              )}
             </div>
           ))}
         </div>
@@ -142,25 +148,50 @@ export default function Dashboard() {
                 ⋯
               </button>
               {showJourneyMenu && (
-                <div className="absolute right-0 top-6 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[160px]">
+                <div className="absolute right-0 top-6 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[180px]">
+                  {isViewingToday && displayCompleted < totalHabits && totalHabits > 0 && (
+                    <button
+                      onClick={() => {
+                        habits.forEach((h) => {
+                          if (!h.isCompletedToday) toggleHabit(h.id);
+                        });
+                        setShowJourneyMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>✅</span> Complete All
+                    </button>
+                  )}
                   <button
-                    onClick={() => setCurrentView('stats')}
+                    onClick={() => {
+                      const text = `${profile.name}'s Habit Progress: ${displayCompleted}/${totalHabits} completed (${percent}%)`;
+                      navigator.clipboard.writeText(text);
+                      setShowJourneyMenu(false);
+                    }}
                     className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
                   >
-                    <span>📊</span> View Stats
+                    <span>📋</span> Copy Progress
                   </button>
                   <button
-                    onClick={() => setCurrentView('calendar')}
+                    onClick={() => {
+                      setCurrentView('calendar');
+                      setShowJourneyMenu(false);
+                    }}
                     className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
                   >
                     <span>📅</span> Full Calendar
                   </button>
-                  <button
-                    onClick={() => setSelectedDate(todayStr)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <span>📍</span> Jump to Today
-                  </button>
+                  {!isViewingToday && (
+                    <button
+                      onClick={() => {
+                        setSelectedDate(todayStr);
+                        setShowJourneyMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>📍</span> Back to Today
+                    </button>
+                  )}
                 </div>
               )}
             </div>

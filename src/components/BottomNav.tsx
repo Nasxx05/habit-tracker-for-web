@@ -43,14 +43,14 @@ export default function BottomNav() {
         {/* Right tabs */}
         {rightItems.map(renderTab)}
 
-        {/* FAB — absolutely centered */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-6">
+        {/* FAB — centered across the full nav width */}
+        <div className="absolute inset-x-0 -top-6 flex justify-center pointer-events-none">
           <button
             onClick={() => {
               setCurrentView('home');
               window.dispatchEvent(new CustomEvent('open-add-habit'));
             }}
-            className="w-14 h-14 bg-forest text-white rounded-full flex items-center justify-center text-2xl shadow-lg shadow-forest/30 hover:scale-105 transition-transform cursor-pointer"
+            className="pointer-events-auto w-14 h-14 bg-forest text-white rounded-full flex items-center justify-center text-2xl shadow-lg shadow-forest/30 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
           >
             +
           </button>
