@@ -2,23 +2,38 @@ export interface Habit {
   id: string;
   name: string;
   emoji: string;
+  category: string;
   createdAt: string;
   currentStreak: number;
   longestStreak: number;
-  completionDates: string[]; // ["2026-02-15", "2026-02-14", ...]
+  completionDates: string[];
   isCompletedToday: boolean;
+  schedule: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
+  reminderTime: string | null;
+  target: string; // e.g., "10 minutes", "8 glasses"
 }
 
-export interface AppSettings {
-  theme: 'light' | 'dark';
-  notifications: boolean;
-  notificationTime: string;
+export interface Reflection {
+  id: string;
+  habitId: string;
+  date: string;
+  text: string;
+  createdAt: string;
 }
 
-export interface AppStats {
-  totalHabitsCompleted: number;
-  perfectDays: number;
+export interface UserProfile {
+  name: string;
+  tagline: string;
   joinDate: string;
 }
 
-export type View = 'welcome' | 'dashboard' | 'calendar';
+export interface Milestone {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt: string | null;
+}
+
+export type View = 'welcome' | 'home' | 'calendar' | 'habit-detail' | 'profile' | 'stats';

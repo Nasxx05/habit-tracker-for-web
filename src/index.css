@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --color-sage: #A8C5B8;
+  --color-sage-light: #c3d9cf;
+  --color-forest: #2D4A3E;
+  --color-mint: #EAF2ED;
+  --color-cream: #F5F5F0;
+  --color-dark: #2C2C2C;
+  --color-muted: #8A8A8A;
+  --color-peach: #E8985E;
+  --color-peach-light: #f5c9a3;
+}
+
 @layer base {
   *,
   *::before,
@@ -9,11 +21,11 @@
 
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #ffffff;
-    color: #1a1a1a;
+    background-color: #F5F5F0;
+    color: #2C2C2C;
     min-height: 100dvh;
   }
 
@@ -33,6 +45,11 @@
   to { transform: translateY(0); }
 }
 
+@keyframes slide-down {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 @keyframes slide-right {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
@@ -48,12 +65,21 @@
   50% { transform: scale(1.1); opacity: 0.8; }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
 }
 
 .animate-slide-right {
@@ -66,4 +92,13 @@
 
 .animate-pulse-gentle {
   animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
