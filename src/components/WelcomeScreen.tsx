@@ -8,10 +8,9 @@ export default function WelcomeScreen() {
 
   const handleContinue = () => {
     setHasVisitedBefore(true);
-    setCurrentView('dashboard');
+    setCurrentView('home');
   };
 
-  // Auto-dismiss for returning users
   useEffect(() => {
     if (hasVisitedBefore && totalHabits > 0) {
       const timer = setTimeout(handleContinue, 1500);
@@ -21,14 +20,13 @@ export default function WelcomeScreen() {
 
   const progressPercent = totalHabits > 0 ? (completedToday / totalHabits) * 100 : 0;
 
-  // First-time visitor
   if (!hasVisitedBefore) {
     return (
       <div
         className="min-h-dvh flex flex-col items-center justify-center px-6 text-white animate-fade-in"
-        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #2D4A3E 0%, #A8C5B8 100%)' }}
       >
-        <div className="text-7xl mb-6 animate-pulse-gentle">🔥</div>
+        <div className="text-7xl mb-6 animate-pulse-gentle">🌱</div>
         <h1 className="text-4xl md:text-5xl font-bold text-center mb-4">Habit Streak Tracker</h1>
         <p className="text-lg md:text-xl text-white/80 text-center mb-10">
           Build better habits,
@@ -37,7 +35,7 @@ export default function WelcomeScreen() {
         </p>
         <button
           onClick={handleContinue}
-          className="bg-white text-purple-700 font-semibold px-10 py-4 rounded-full text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
+          className="bg-white text-forest font-semibold px-10 py-4 rounded-full text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
         >
           Get Started →
         </button>
@@ -45,11 +43,10 @@ export default function WelcomeScreen() {
     );
   }
 
-  // Returning user
   return (
     <div
       className="min-h-dvh flex flex-col items-center justify-center px-6 text-white animate-fade-in cursor-pointer"
-      style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #2D4A3E 0%, #A8C5B8 100%)' }}
       onClick={handleContinue}
     >
       <p className="text-5xl mb-4">{greeting.emoji}</p>
@@ -73,7 +70,7 @@ export default function WelcomeScreen() {
       )}
       <button
         onClick={handleContinue}
-        className="bg-white text-purple-700 font-semibold px-10 py-4 rounded-full text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
+        className="bg-white text-forest font-semibold px-10 py-4 rounded-full text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
       >
         Continue →
       </button>

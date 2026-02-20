@@ -8,6 +8,8 @@ const EMOJI_OPTIONS = [
   '📝', '🎸', '🏋️', '🚴', '🧠', '📱', '🐕', '🍳',
 ];
 
+const CATEGORIES = ['General', 'Health', 'Fitness', 'Mindfulness', 'Learning', 'Productivity', 'Self-care', 'Social'];
+
 interface AddHabitModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +19,8 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   const { addHabit } = useHabits();
   const [name, setName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('💪');
+  const [category, setCategory] = useState('General');
+  const [target, setTarget] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -28,9 +32,11 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addHabit(name.trim(), selectedEmoji);
+    addHabit(name.trim(), selectedEmoji, category, target);
     setName('');
     setSelectedEmoji('💪');
+    setCategory('General');
+    setTarget('');
     onClose();
   };
 
@@ -39,51 +45,43 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 animate-fade-in"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-md p-6 animate-slide-up">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Habit</h2>
+      <div className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-md p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-xl font-bold text-dark">Add New Habit</h2>
           <button
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-2xl transition cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-mint text-muted text-xl transition cursor-pointer"
           >
             ×
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Habit Name
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Habit Name</label>
             <input
               ref={inputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Exercise 30 minutes"
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none transition text-gray-900"
+              placeholder="e.g., Morning Meditation"
+              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
               maxLength={50}
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Choose an Emoji
-            </label>
-            <div className="grid grid-cols-7 gap-2">
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Icon</label>
+            <div className="grid grid-cols-7 gap-1.5">
               {EMOJI_OPTIONS.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => setSelectedEmoji(emoji)}
-                  className={`text-2xl p-2 rounded-lg transition cursor-pointer ${
-                    selectedEmoji === emoji
-                      ? 'bg-purple-100 ring-2 ring-purple-500'
-                      : 'hover:bg-gray-100'
+                  className={`text-2xl p-1.5 rounded-lg transition cursor-pointer ${
+                    selectedEmoji === emoji ? 'bg-mint ring-2 ring-sage' : 'hover:bg-cream'
                   }`}
                 >
                   {emoji}
@@ -92,17 +90,48 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
             </div>
           </div>
 
-          <div className="mb-4 p-3 bg-gray-50 rounded-xl text-center">
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Category</label>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition cursor-pointer ${
+                    category === c ? 'bg-forest text-white' : 'bg-mint text-forest hover:bg-sage-light'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Target (optional)</label>
+            <input
+              type="text"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              placeholder="e.g., 10 minutes, 8 glasses"
+              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
+            />
+          </div>
+
+          {/* Preview */}
+          <div className="p-3 bg-mint rounded-xl flex items-center gap-3">
             <span className="text-3xl">{selectedEmoji}</span>
-            <span className="ml-2 text-lg font-semibold text-gray-700">
-              {name || 'Your habit name'}
-            </span>
+            <div>
+              <span className="text-sm font-bold text-dark">{name || 'Your habit name'}</span>
+              <p className="text-xs text-muted">{target || category}</p>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={!name.trim()}
-            className="w-full bg-purple-600 text-white font-semibold py-4 rounded-xl hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full bg-forest text-white font-semibold py-3.5 rounded-xl hover:bg-forest/90 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Create Habit
           </button>
