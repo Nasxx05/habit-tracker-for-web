@@ -102,3 +102,11 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Snap scrolling */
+.snap-x {
+  scroll-snap-type: x proximity;
+}
+.snap-center {
+  scroll-snap-align: center;
+}
