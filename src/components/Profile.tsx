@@ -39,8 +39,19 @@ export default function Profile() {
 
   const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
-  const totalPossible = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
-  const completionRate = totalPossible > 0 ? Math.round((totalCompletions / Math.max(totalPossible, 1)) * 100) : 0;
+  // Calculate total scheduled days since each habit was created
+  const today = new Date();
+  const totalPossible = habits.reduce((sum, h) => {
+    const created = new Date(h.createdAt);
+    let possible = 0;
+    const d = new Date(created);
+    while (d <= today) {
+      if (h.schedule.includes(d.getDay())) possible++;
+      d.setDate(d.getDate() + 1);
+    }
+    return sum + possible;
+  }, 0);
+  const completionRate = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0;
   const unlockedCount = milestones.filter((m) => m.unlocked).length;
 
   const joinDate = new Date(profile.joinDate);
