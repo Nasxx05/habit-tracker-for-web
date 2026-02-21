@@ -1,81 +1,144 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
+import type { ThemeMode } from '../types/habit';
 
 export default function Profile() {
-  const { habits, profile, updateProfile, milestones, setCurrentView } = useHabits();
+  const { habits, profile, updateProfile, milestones, setCurrentView, theme, setTheme, exportData, importData } = useHabits();
   const [editingName, setEditingName] = useState(false);
+  const [editingTagline, setEditingTagline] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name);
+  const [taglineInput, setTaglineInput] = useState(profile.tagline);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 200;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        updateProfile({ avatar: canvas.toDataURL('image/jpeg', 0.8) });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
   const totalPossible = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
-  const completionRate = totalPossible > 0
-    ? Math.round((totalCompletions / Math.max(totalPossible, 1)) * 100)
-    : 0;
+  const completionRate = totalPossible > 0 ? Math.round((totalCompletions / Math.max(totalPossible, 1)) * 100) : 0;
   const unlockedCount = milestones.filter((m) => m.unlocked).length;
 
   const joinDate = new Date(profile.joinDate);
   const joinStr = joinDate.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 
   const saveName = () => {
-    if (nameInput.trim()) {
-      updateProfile({ name: nameInput.trim() });
-    }
+    if (nameInput.trim()) updateProfile({ name: nameInput.trim() });
     setEditingName(false);
   };
+
+  const saveTagline = () => {
+    updateProfile({ tagline: taglineInput.trim() });
+    setEditingTagline(false);
+  };
+
+  const handleExport = () => {
+    const data = exportData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const success = importData(reader.result as string);
+      setImportStatus(success ? 'success' : 'error');
+      setTimeout(() => setImportStatus('idle'), 3000);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
+    { value: 'light', label: 'Light', icon: '☀️' },
+    { value: 'dark', label: 'Dark', icon: '🌙' },
+    { value: 'system', label: 'Auto', icon: '💻' },
+  ];
 
   const menuItems = [
     { icon: '✏️', label: 'Edit Profile', action: () => setEditingName(true) },
     { icon: '📊', label: 'View Statistics', action: () => setCurrentView('stats') },
     { icon: '📅', label: 'Calendar History', action: () => setCurrentView('calendar') },
+    { icon: '📋', label: 'Weekly Review', action: () => setCurrentView('weekly-review') },
   ];
 
   return (
     <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
-      {/* Top Bar */}
-      <div className="px-4 py-4 flex items-center justify-between">
+      <div className="px-4 py-4">
         <h1 className="text-2xl font-bold text-dark">Profile</h1>
-        <button
-          onClick={() => setCurrentView('home')}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-mint transition text-muted cursor-pointer"
-        >
-          ⚙️
-        </button>
       </div>
 
       {/* Profile Card */}
       <section className="px-4 pt-2">
         <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
           <div className="relative inline-block">
-            <div className="w-20 h-20 rounded-full bg-mint flex items-center justify-center text-4xl mx-auto">
-              👤
-            </div>
-            <button
-              onClick={() => setEditingName(true)}
-              className="absolute -bottom-1 -right-1 w-7 h-7 bg-sage rounded-full flex items-center justify-center text-white text-xs shadow-md cursor-pointer"
-            >
-              ✏️
-            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarPick} className="hidden" />
+            {profile.avatar ? (
+              <img src={profile.avatar} alt="Profile" className="w-20 h-20 rounded-full object-cover mx-auto" />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-mint flex items-center justify-center text-4xl mx-auto">👤</div>
+            )}
+            <button onClick={() => fileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-sage rounded-full flex items-center justify-center text-white text-xs shadow-md cursor-pointer hover:bg-forest transition">📷</button>
           </div>
           {editingName ? (
             <div className="mt-4 flex items-center justify-center gap-2">
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
+              <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && saveName()}
                 className="px-3 py-2 border-2 border-sage-light rounded-xl text-center font-bold text-dark focus:border-forest focus:outline-none"
-                autoFocus
-                maxLength={30}
-              />
+                autoFocus maxLength={30} />
               <button onClick={saveName} className="text-forest font-semibold text-sm cursor-pointer">Save</button>
             </div>
           ) : (
-            <h2 className="text-xl font-bold text-dark mt-4">{profile.name}</h2>
+            <h2 className="text-xl font-bold text-dark mt-4 cursor-pointer hover:text-forest transition" onClick={() => setEditingName(true)}>
+              {profile.name}
+            </h2>
           )}
-          <p className="text-muted text-sm mt-1">
-            {profile.tagline || `Mindful since ${joinStr}`}
-          </p>
+          {editingTagline ? (
+            <div className="mt-2 flex items-center justify-center gap-2">
+              <input type="text" value={taglineInput} onChange={(e) => setTaglineInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveTagline()}
+                placeholder="Your personal tagline..."
+                className="px-3 py-1.5 border-2 border-sage-light rounded-xl text-center text-sm text-dark focus:border-forest focus:outline-none"
+                autoFocus maxLength={60} />
+              <button onClick={saveTagline} className="text-forest font-semibold text-sm cursor-pointer">Save</button>
+            </div>
+          ) : (
+            <p className="text-muted text-sm mt-1 cursor-pointer hover:text-forest transition" onClick={() => { setTaglineInput(profile.tagline); setEditingTagline(true); }}>
+              {profile.tagline || `Mindful since ${joinStr}`}
+            </p>
+          )}
         </div>
       </section>
 
@@ -101,25 +164,37 @@ export default function Profile() {
         </div>
       </section>
 
+      {/* Theme Toggle */}
+      <section className="px-4 pt-6">
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">APPEARANCE</h2>
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex gap-2">
+            {themeOptions.map((opt) => (
+              <button key={opt.value} onClick={() => setTheme(opt.value)}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium transition cursor-pointer flex flex-col items-center gap-1 ${
+                  theme === opt.value ? 'bg-forest text-white' : 'bg-mint text-forest hover:bg-sage-light'
+                }`}
+              >
+                <span className="text-lg">{opt.icon}</span>
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Milestones */}
       <section className="px-4 pt-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-bold text-muted tracking-widest">MILESTONES</h2>
-          <span className="text-xs font-semibold text-sage bg-mint px-2.5 py-1 rounded-full">
-            {unlockedCount} Unlocked
-          </span>
+          <span className="text-xs font-semibold text-sage bg-mint px-2.5 py-1 rounded-full">{unlockedCount} Unlocked</span>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
           {milestones.map((m) => (
-            <div
-              key={m.id}
-              className={`flex-shrink-0 w-24 text-center ${m.unlocked ? '' : 'opacity-40'}`}
-            >
+            <div key={m.id} className={`flex-shrink-0 w-24 text-center ${m.unlocked ? '' : 'opacity-40'}`}>
               <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mx-auto shadow-sm ${
                 m.unlocked ? 'bg-mint border-2 border-sage' : 'bg-cream border-2 border-gray-200'
-              }`}>
-                {m.unlocked ? m.icon : '🔒'}
-              </div>
+              }`}>{m.unlocked ? m.icon : '🔒'}</div>
               <p className="text-xs font-semibold text-dark mt-2 leading-tight">{m.name}</p>
               <p className="text-xs text-muted leading-tight">{m.description}</p>
             </div>
@@ -127,13 +202,33 @@ export default function Profile() {
         </div>
       </section>
 
+      {/* Data Management */}
+      <section className="px-4 pt-6">
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">DATA</h2>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <button onClick={handleExport}
+            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer border-b border-gray-100">
+            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📤</span>
+            <span className="text-sm font-medium text-dark flex-1 text-left">Export Data (JSON)</span>
+            <span className="text-muted text-sm">›</span>
+          </button>
+          <button onClick={() => importInputRef.current?.click()}
+            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer">
+            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📥</span>
+            <span className="text-sm font-medium text-dark flex-1 text-left">
+              {importStatus === 'success' ? 'Import Successful!' : importStatus === 'error' ? 'Import Failed' : 'Import Data'}
+            </span>
+            <span className="text-muted text-sm">›</span>
+          </button>
+          <input ref={importInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+        </div>
+      </section>
+
       {/* Menu */}
       <section className="px-4 pt-6">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {menuItems.map((item, i) => (
-            <button
-              key={i}
-              onClick={item.action}
+            <button key={i} onClick={item.action}
               className={`w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer ${
                 i < menuItems.length - 1 ? 'border-b border-gray-100' : ''
               }`}

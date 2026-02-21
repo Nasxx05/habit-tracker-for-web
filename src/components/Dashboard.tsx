@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHabits } from '../context/HabitContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
 import HabitCard from './HabitCard';
@@ -7,10 +7,12 @@ import AddHabitModal from './AddHabitModal';
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function Dashboard() {
-  const { habits, completedToday, totalHabits, profile, setCurrentView, toggleHabit } = useHabits();
+  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits } = useHabits();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +45,7 @@ export default function Dashboard() {
   const todayStr = formatDate(today);
   const isViewingToday = selectedDate === todayStr;
 
-  // Generate 6 weeks of dates: 4 weeks back + 2 weeks forward
+  // Generate 6 weeks of dates
   const dates = Array.from({ length: 42 }).map((_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - 28 + i);
@@ -59,18 +61,41 @@ export default function Dashboard() {
     };
   });
 
-  // Stats for selected date
-  const habitsCompletedOnDate = habits.filter((h) =>
-    h.completionDates.includes(selectedDate)
-  ).length;
-  const displayCompleted = isViewingToday ? completedToday : habitsCompletedOnDate;
-  const percent = totalHabits > 0 ? Math.round((displayCompleted / totalHabits) * 100) : 0;
-
-  // Format selected date for display
+  // For today: use scheduled habits; for past dates: use schedule-aware
   const selDateObj = new Date(selectedDate + 'T12:00:00');
+  const selDow = selDateObj.getDay();
+  const habitsScheduledOnDate = habits.filter((h) => h.schedule.includes(selDow));
+  const habitsCompletedOnDate = habitsScheduledOnDate.filter((h) => h.completionDates.includes(selectedDate)).length;
+  const displayCompleted = isViewingToday ? completedToday : habitsCompletedOnDate;
+  const displayTotal = isViewingToday ? totalHabits : habitsScheduledOnDate.length;
+  const percent = displayTotal > 0 ? Math.round((displayCompleted / displayTotal) * 100) : 0;
+
+  // Category filtering
+  const categories = ['all', ...new Set(scheduledToday.map((h) => h.category))];
+  const filteredHabits = categoryFilter === 'all'
+    ? scheduledToday
+    : scheduledToday.filter((h) => h.category === categoryFilter);
+
   const selDateDisplay = isViewingToday
     ? 'Today'
     : selDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // Drag-to-reorder handlers
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== index) {
+      reorderHabits(dragIndex, index);
+      setDragIndex(index);
+    }
+  }, [dragIndex, reorderHabits]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null);
+  }, []);
 
   return (
     <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
@@ -78,18 +103,27 @@ export default function Dashboard() {
       <section className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Profile picture — tap to go to profile */}
             <button
               onClick={() => setCurrentView('profile')}
-              className="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-lg cursor-pointer hover:ring-2 hover:ring-sage transition"
+              className="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-lg cursor-pointer hover:ring-2 hover:ring-sage transition overflow-hidden"
             >
-              👤
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                '👤'
+              )}
             </button>
             <div>
               <p className="text-sm text-muted">{greeting.text}</p>
               <p className="text-lg font-bold text-dark">{profile.name}</p>
             </div>
           </div>
+          <button
+            onClick={() => setCurrentView('weekly-review')}
+            className="px-3 py-1.5 rounded-full bg-mint text-forest text-xs font-semibold hover:bg-sage-light transition cursor-pointer"
+          >
+            Weekly Review
+          </button>
         </div>
       </section>
 
@@ -136,7 +170,6 @@ export default function Dashboard() {
             <p className="text-xs font-bold text-muted tracking-widest">
               {isViewingToday ? 'DAILY JOURNEY' : selDateDisplay.toUpperCase()}
             </p>
-            {/* 3-dot menu */}
             <div className="relative">
               <button
                 onClick={(e) => {
@@ -149,10 +182,10 @@ export default function Dashboard() {
               </button>
               {showJourneyMenu && (
                 <div className="absolute right-0 top-6 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[180px]">
-                  {isViewingToday && displayCompleted < totalHabits && totalHabits > 0 && (
+                  {isViewingToday && displayCompleted < displayTotal && displayTotal > 0 && (
                     <button
                       onClick={() => {
-                        habits.forEach((h) => {
+                        scheduledToday.forEach((h) => {
                           if (!h.isCompletedToday) toggleHabit(h.id);
                         });
                         setShowJourneyMenu(false);
@@ -164,7 +197,7 @@ export default function Dashboard() {
                   )}
                   <button
                     onClick={() => {
-                      const text = `${profile.name}'s Habit Progress: ${displayCompleted}/${totalHabits} completed (${percent}%)`;
+                      const text = `${profile.name}'s Habit Progress: ${displayCompleted}/${displayTotal} completed (${percent}%)`;
                       navigator.clipboard.writeText(text);
                       setShowJourneyMenu(false);
                     }}
@@ -173,20 +206,20 @@ export default function Dashboard() {
                     <span>📋</span> Copy Progress
                   </button>
                   <button
-                    onClick={() => {
-                      setCurrentView('calendar');
-                      setShowJourneyMenu(false);
-                    }}
+                    onClick={() => { setCurrentView('calendar'); setShowJourneyMenu(false); }}
                     className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
                   >
                     <span>📅</span> Full Calendar
                   </button>
+                  <button
+                    onClick={() => { setCurrentView('weekly-review'); setShowJourneyMenu(false); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>📊</span> Weekly Review
+                  </button>
                   {!isViewingToday && (
                     <button
-                      onClick={() => {
-                        setSelectedDate(todayStr);
-                        setShowJourneyMenu(false);
-                      }}
+                      onClick={() => { setSelectedDate(todayStr); setShowJourneyMenu(false); }}
                       className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
                     >
                       <span>📍</span> Back to Today
@@ -199,7 +232,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-4 mb-3">
             <p className="text-4xl font-bold text-forest">{percent}%</p>
             <div className="flex gap-2">
-              {habits.slice(0, 4).map((h) => (
+              {scheduledToday.slice(0, 4).map((h) => (
                 <span key={h.id} className="w-8 h-8 bg-mint rounded-full flex items-center justify-center text-sm">
                   {h.emoji}
                 </span>
@@ -207,22 +240,38 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-sm text-muted mb-3">
-            {displayCompleted} of {totalHabits} Completed
+            {displayCompleted} of {displayTotal} Completed
           </p>
           <div className="w-full h-2.5 bg-cream rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${percent}%`,
-                background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)',
-              }}
+              style={{ width: `${percent}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
             />
           </div>
         </div>
       </section>
 
-      {/* Today's Habits */}
-      <section className="px-4 pt-6">
+      {/* Category Filter */}
+      {categories.length > 2 && isViewingToday && (
+        <section className="px-4 pt-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+                  categoryFilter === cat ? 'bg-forest text-white' : 'bg-mint text-forest hover:bg-sage-light'
+                }`}
+              >
+                {cat === 'all' ? 'All' : cat}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Habits List */}
+      <section className="px-4 pt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold text-dark">
             {isViewingToday ? "Today's Habits" : `Habits · ${selDateDisplay}`}
@@ -247,22 +296,36 @@ export default function Dashboard() {
               + Add Your First Habit
             </button>
           </div>
+        ) : filteredHabits.length === 0 && isViewingToday ? (
+          <div className="text-center py-8 bg-white rounded-2xl shadow-sm">
+            <div className="text-4xl mb-2">😌</div>
+            <h3 className="text-base font-bold text-dark mb-1">
+              {categoryFilter !== 'all' ? `No ${categoryFilter} habits scheduled` : 'Nothing scheduled today'}
+            </h3>
+            <p className="text-muted text-sm">Enjoy your free time or add a new habit!</p>
+          </div>
         ) : isViewingToday ? (
           <div className="space-y-3">
-            {habits.map((habit) => (
-              <HabitCard key={habit.id} habit={habit} />
+            {filteredHabits.map((habit, index) => (
+              <div
+                key={habit.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`transition-all ${dragIndex === index ? 'opacity-50 scale-[1.02]' : ''}`}
+              >
+                <HabitCard habit={habit} />
+              </div>
             ))}
           </div>
         ) : (
-          /* Past date: show read-only completion status */
           <div className="space-y-3">
-            {habits.map((habit) => {
+            {habitsScheduledOnDate.map((habit) => {
               const wasCompleted = habit.completionDates.includes(selectedDate);
+              const wasSkipped = (habit.skipDates || []).includes(selectedDate);
               return (
-                <div
-                  key={habit.id}
-                  className="bg-white rounded-2xl p-4 shadow-sm"
-                >
+                <div key={habit.id} className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-mint rounded-xl flex items-center justify-center text-2xl shrink-0">
                       {habit.emoji}
@@ -270,17 +333,15 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-dark truncate">{habit.name}</h3>
                       <p className="text-xs text-muted mt-0.5">
-                        {wasCompleted ? `${habit.target || habit.category} · Done` : `${habit.target || habit.category} · Missed`}
+                        {wasSkipped ? 'Rest Day' : wasCompleted ? `${habit.target || habit.category} · Done` : `${habit.target || habit.category} · Missed`}
                       </p>
                     </div>
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                        wasCompleted
-                          ? 'bg-sage text-white'
-                          : 'border-2 border-gray-200 text-gray-300'
+                        wasSkipped ? 'bg-peach-light text-peach' : wasCompleted ? 'bg-sage text-white' : 'border-2 border-gray-200 text-gray-300'
                       }`}
                     >
-                      {wasCompleted ? '✓' : '–'}
+                      {wasSkipped ? '💤' : wasCompleted ? '✓' : '–'}
                     </div>
                   </div>
                 </div>

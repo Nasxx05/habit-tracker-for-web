@@ -2,53 +2,78 @@ import { useHabits } from '../context/HabitContext';
 import { getToday, formatDate, getMonthName } from '../utils/dateHelpers';
 
 export default function Stats() {
-  const { habits } = useHabits();
+  const { habits, setCurrentView } = useHabits();
   const todayStr = getToday();
+
+  // Empty state
+  if (habits.length === 0) {
+    return (
+      <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
+        <div className="px-4 py-4">
+          <h1 className="text-2xl font-bold text-dark">Statistics</h1>
+          <p className="text-muted text-sm mt-1">Your habit tracking overview</p>
+        </div>
+        <div className="px-4">
+          <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
+            <p className="text-5xl mb-3">📊</p>
+            <h3 className="text-lg font-bold text-dark mb-1">No stats yet</h3>
+            <p className="text-muted text-sm mb-5">Create some habits and start tracking to see your statistics here.</p>
+            <button
+              onClick={() => setCurrentView('home')}
+              className="bg-forest text-white font-semibold px-6 py-3 rounded-full hover:bg-forest/90 transition cursor-pointer"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
   const activeStreaks = habits.filter((h) => h.currentStreak > 0).length;
 
-  // Last 7 days completion data
+  // Last 7 days — schedule-aware
   const last7 = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const dateStr = formatDate(d);
-    const completed = habits.filter((h) => h.completionDates.includes(dateStr)).length;
+    const dow = d.getDay();
+    const scheduled = habits.filter((h) => h.schedule.includes(dow));
+    const completed = scheduled.filter((h) => h.completionDates.includes(dateStr)).length;
     return {
       day: d.toLocaleString('en-US', { weekday: 'short' }),
       completed,
-      total: habits.length,
+      total: scheduled.length,
       isFuture: dateStr > todayStr,
     };
   });
 
-  // This month stats
+  // This month stats — schedule-aware
   const now = new Date();
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
   let monthCompletions = 0;
   let monthPossible = 0;
+  let perfectDays = 0;
+
   for (let day = 1; day <= now.getDate(); day++) {
-    const dateStr = formatDate(new Date(thisYear, thisMonth, day));
-    monthCompletions += habits.filter((h) => h.completionDates.includes(dateStr)).length;
-    monthPossible += habits.length;
+    const d = new Date(thisYear, thisMonth, day);
+    const dateStr = formatDate(d);
+    const dow = d.getDay();
+    const scheduled = habits.filter((h) => h.schedule.includes(dow));
+    const completedCount = scheduled.filter((h) => h.completionDates.includes(dateStr)).length;
+    monthCompletions += completedCount;
+    monthPossible += scheduled.length;
+    if (scheduled.length > 0 && completedCount === scheduled.length) perfectDays++;
   }
   const monthRate = monthPossible > 0 ? Math.round((monthCompletions / monthPossible) * 100) : 0;
-
-  // Perfect days this month
-  let perfectDays = 0;
-  for (let day = 1; day <= now.getDate(); day++) {
-    const dateStr = formatDate(new Date(thisYear, thisMonth, day));
-    const allDone = habits.length > 0 && habits.every((h) => h.completionDates.includes(dateStr));
-    if (allDone) perfectDays++;
-  }
 
   const maxBar = Math.max(...last7.map((d) => d.total), 1);
 
   return (
     <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
-      {/* Header */}
       <div className="px-4 py-4">
         <h1 className="text-2xl font-bold text-dark">Statistics</h1>
         <p className="text-muted text-sm mt-1">Your habit tracking overview</p>
@@ -120,42 +145,34 @@ export default function Stats() {
           <div className="w-full h-3 bg-cream rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${monthRate}%`,
-                background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)',
-              }}
+              style={{ width: `${monthRate}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
             />
           </div>
           <p className="text-xs text-muted mt-2">
-            {monthCompletions} of {monthPossible} habit completions this month
+            {monthCompletions} of {monthPossible} scheduled completions this month
           </p>
         </div>
       </section>
 
       {/* Per-Habit Stats */}
-      {habits.length > 0 && (
-        <section className="px-4 pt-6">
-          <h2 className="text-xs font-bold text-muted tracking-widest mb-3">HABITS BREAKDOWN</h2>
-          <div className="space-y-2">
-            {habits.map((h) => {
-              const rate = h.completionDates.length;
-              return (
-                <div key={h.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
-                  <span className="text-2xl">{h.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-dark truncate">{h.name}</p>
-                    <p className="text-xs text-muted">{h.currentStreak} day streak</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-forest">{rate}</p>
-                    <p className="text-xs text-muted">days</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <section className="px-4 pt-6">
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">HABITS BREAKDOWN</h2>
+        <div className="space-y-2">
+          {habits.map((h) => (
+            <div key={h.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
+              <span className="text-2xl">{h.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-dark truncate">{h.name}</p>
+                <p className="text-xs text-muted">{h.currentStreak > 0 ? `${h.currentStreak} day streak 🔥` : 'No active streak'}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-forest">{h.completionDates.length}</p>
+                <p className="text-xs text-muted">days</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
