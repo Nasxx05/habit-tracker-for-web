@@ -15,7 +15,7 @@ export default function BottomNav() {
   ];
 
   const renderTab = (item: { view: View; label: string; icon: string }) => {
-    const isActive = currentView === item.view;
+    const isActive = currentView === item.view || (item.view === 'home' && currentView === 'weekly-review');
     return (
       <button
         key={item.view}
@@ -34,16 +34,10 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
       <div className="max-w-3xl mx-auto flex items-center relative">
-        {/* Left tabs */}
         {leftItems.map(renderTab)}
-
-        {/* FAB spacer — same flex-1 width as a tab so it stays centered */}
         <div className="flex-1" />
-
-        {/* Right tabs */}
         {rightItems.map(renderTab)}
 
-        {/* FAB — centered across the full nav width */}
         <div className="absolute inset-x-0 -top-6 flex justify-center pointer-events-none">
           <button
             onClick={() => {

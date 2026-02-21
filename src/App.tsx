@@ -5,7 +5,9 @@ import Calendar from './components/Calendar';
 import HabitDetail from './components/HabitDetail';
 import Profile from './components/Profile';
 import Stats from './components/Stats';
+import WeeklyReview from './components/WeeklyReview';
 import BottomNav from './components/BottomNav';
+import UndoToast from './components/UndoToast';
 
 function AppContent() {
   const { currentView } = useHabits();
@@ -22,8 +24,10 @@ function AppContent() {
         {currentView === 'habit-detail' && <HabitDetail />}
         {currentView === 'profile' && <Profile />}
         {currentView === 'stats' && <Stats />}
+        {currentView === 'weekly-review' && <WeeklyReview />}
       </main>
       <BottomNav />
+      <UndoToast />
     </div>
   );
 }
