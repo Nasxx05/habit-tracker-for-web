@@ -28,15 +28,21 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     }
   }, [currentScreen, goTo, onComplete]);
 
+  const didSwipe = useRef(false);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = e.touches[0].clientX;
+    didSwipe.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.touches[0].clientX;
+    didSwipe.current = true;
   };
 
   const handleTouchEnd = () => {
+    if (!didSwipe.current) return;
     const diff = touchStartX.current - touchEndX.current;
     const threshold = 50;
     if (Math.abs(diff) > threshold) {
