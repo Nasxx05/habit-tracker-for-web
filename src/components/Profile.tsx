@@ -3,14 +3,12 @@ import { useHabits } from '../context/HabitContext';
 import type { ThemeMode } from '../types/habit';
 
 export default function Profile() {
-  const { habits, profile, updateProfile, milestones, setCurrentView, theme, setTheme, exportData, importData } = useHabits();
+  const { habits, profile, updateProfile, milestones, setCurrentView, theme, setTheme } = useHabits();
   const [editingName, setEditingName] = useState(false);
   const [editingTagline, setEditingTagline] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name);
   const [taglineInput, setTaglineInput] = useState(profile.tagline);
-  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const importInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,30 +65,6 @@ export default function Profile() {
     setEditingTagline(false);
   };
 
-  const handleExport = () => {
-    const data = exportData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const success = importData(reader.result as string);
-      setImportStatus(success ? 'success' : 'error');
-      setTimeout(() => setImportStatus('idle'), 3000);
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
   const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
     { value: 'light', label: 'Light', icon: '☀️' },
     { value: 'dark', label: 'Dark', icon: '🌙' },
@@ -99,8 +73,6 @@ export default function Profile() {
 
   const menuItems = [
     { icon: '✏️', label: 'Edit Profile', action: () => setEditingName(true) },
-    { icon: '📊', label: 'View Statistics', action: () => setCurrentView('stats') },
-    { icon: '📅', label: 'Calendar History', action: () => setCurrentView('calendar') },
     { icon: '📋', label: 'Weekly Review', action: () => setCurrentView('weekly-review') },
   ];
 
@@ -210,28 +182,6 @@ export default function Profile() {
               <p className="text-xs text-muted leading-tight">{m.description}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Data Management */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">DATA</h2>
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button onClick={handleExport}
-            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer border-b border-gray-100">
-            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📤</span>
-            <span className="text-sm font-medium text-dark flex-1 text-left">Export Data (JSON)</span>
-            <span className="text-muted text-sm">›</span>
-          </button>
-          <button onClick={() => importInputRef.current?.click()}
-            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer">
-            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📥</span>
-            <span className="text-sm font-medium text-dark flex-1 text-left">
-              {importStatus === 'success' ? 'Import Successful!' : importStatus === 'error' ? 'Import Failed' : 'Import Data'}
-            </span>
-            <span className="text-muted text-sm">›</span>
-          </button>
-          <input ref={importInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
         </div>
       </section>
 
