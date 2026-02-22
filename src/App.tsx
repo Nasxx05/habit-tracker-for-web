@@ -9,6 +9,8 @@ import Stats from './components/Stats';
 import WeeklyReview from './components/WeeklyReview';
 import BottomNav from './components/BottomNav';
 import UndoToast from './components/UndoToast';
+import DesktopBlocker from './components/DesktopBlocker';
+import InstallBanner from './components/InstallBanner';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -61,6 +63,8 @@ function AppContent() {
 
   return (
     <div className="min-h-dvh bg-cream">
+      <DesktopBlocker />
+      <InstallBanner />
       <main>
         {currentView === 'home' && <Dashboard />}
         {currentView === 'calendar' && <Calendar />}
