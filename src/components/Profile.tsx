@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
-import type { ThemeMode } from '../types/habit';
 
 export default function Profile() {
-  const { habits, profile, updateProfile, milestones, setCurrentView, theme, setTheme } = useHabits();
+  const { habits, profile, updateProfile, milestones, setCurrentView } = useHabits();
   const [editingName, setEditingName] = useState(false);
   const [editingTagline, setEditingTagline] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name);
@@ -64,12 +63,6 @@ export default function Profile() {
     updateProfile({ tagline: taglineInput.trim() });
     setEditingTagline(false);
   };
-
-  const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
-    { value: 'light', label: 'Light', icon: '☀️' },
-    { value: 'dark', label: 'Dark', icon: '🌙' },
-    { value: 'system', label: 'Auto', icon: '💻' },
-  ];
 
   const menuItems = [
     { icon: '✏️', label: 'Edit Profile', action: () => setEditingName(true) },
@@ -143,25 +136,6 @@ export default function Profile() {
             <p className="text-2xl mb-1">🔄</p>
             <p className="text-xl font-bold text-forest">{completionRate}%</p>
             <p className="text-xs text-muted mt-0.5">Completion</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Theme Toggle */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">APPEARANCE</h2>
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="flex gap-2">
-            {themeOptions.map((opt) => (
-              <button key={opt.value} onClick={() => setTheme(opt.value)}
-                className={`flex-1 py-3 rounded-xl text-sm font-medium transition cursor-pointer flex flex-col items-center gap-1 ${
-                  theme === opt.value ? 'bg-forest text-white' : 'bg-mint text-forest hover:bg-sage-light'
-                }`}
-              >
-                <span className="text-lg">{opt.icon}</span>
-                <span>{opt.label}</span>
-              </button>
-            ))}
           </div>
         </div>
       </section>

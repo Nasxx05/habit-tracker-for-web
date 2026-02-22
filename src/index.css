@@ -34,12 +34,6 @@
     min-height: 100dvh;
   }
 
-  /* Dark mode overrides */
-  .dark body,
-  .dark #root {
-    background-color: #1a1a2e;
-    color: #e0e0e0;
-  }
 }
 
 /* Custom animations */
@@ -132,20 +126,6 @@
 .snap-center {
   scroll-snap-align: center;
 }
-
-/* Dark mode color overrides */
-.dark .bg-cream { background-color: #1a1a2e !important; }
-.dark .bg-white { background-color: #16213e !important; }
-.dark .bg-mint { background-color: #1a2a3a !important; }
-.dark .text-dark { color: #e0e0e0 !important; }
-.dark .text-muted { color: #8899aa !important; }
-.dark .border-gray-100 { border-color: #2a3a4a !important; }
-.dark .border-gray-200 { border-color: #2a3a4a !important; }
-.dark .bg-cream { background-color: #0f1a2e !important; }
-.dark .hover\:bg-mint:hover { background-color: #1a2a3a !important; }
-.dark .border-sage-light { border-color: #3a5a4a !important; }
-.dark .bg-red-50 { background-color: #2a1a1a !important; }
-.dark .border-red-200 { border-color: #5a2a2a !important; }
 
 /* Drag handle styling */
 .drag-handle {

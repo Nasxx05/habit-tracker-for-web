@@ -54,5 +54,3 @@ export interface UndoAction {
 }
 
 export type View = 'welcome' | 'home' | 'calendar' | 'habit-detail' | 'profile' | 'stats' | 'weekly-review';
-
-export type ThemeMode = 'light' | 'dark' | 'system';
