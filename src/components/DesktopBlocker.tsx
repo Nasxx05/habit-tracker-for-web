@@ -56,7 +56,7 @@ export default function DesktopBlocker() {
           border: '1px solid rgba(168, 197, 184, 0.25)',
         }}>
           <p style={{ fontSize: '0.9rem', color: '#c3d9cf', margin: 0, lineHeight: 1.6 }}>
-            Scan the QR code or type the URL on your phone's browser to get started.
+            Open <strong style={{ color: '#fff' }}>{window.location.hostname}</strong> on your phone's browser to get started.
           </p>
         </div>
       </div>
