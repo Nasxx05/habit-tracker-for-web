@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useMemo, useState, t
 import { v4 as uuidv4 } from 'uuid';
 import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction, ThemeMode } from '../types/habit';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { getToday, formatDate } from '../utils/dateHelpers';
+import { getToday } from '../utils/dateHelpers';
 import { calculateStreak, calculateLongestStreak } from '../utils/streakCalculator';
 
 const DEFAULT_MILESTONES: Milestone[] = [
@@ -13,7 +13,6 @@ const DEFAULT_MILESTONES: Milestone[] = [
   { id: 'centurion', name: 'Centurion', description: '100 Completions', icon: '💯', unlocked: false, unlockedAt: null },
   { id: 'collector', name: 'Collector', description: '5 Active Habits', icon: '📋', unlocked: false, unlockedAt: null },
   { id: 'reflective', name: 'Reflective', description: '10 Reflections', icon: '📝', unlocked: false, unlockedAt: null },
-  { id: 'perfect-week', name: 'Perfect Week', description: '7 Perfect Days', icon: '💎', unlocked: false, unlockedAt: null },
 ];
 
 interface HabitContextType {
@@ -127,18 +126,6 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
     const today = getToday();
 
-    // Count perfect days (last 30 days)
-    let perfectDayCount = 0;
-    for (let i = 0; i < 30; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = formatDate(d);
-      const scheduled = habits.filter((h) => h.schedule.includes(d.getDay()));
-      if (scheduled.length > 0 && scheduled.every((h) => h.completionDates.includes(dateStr))) {
-        perfectDayCount++;
-      }
-    }
-
     setMilestones((prev: Milestone[]) => {
       let changed = false;
       const updated = prev.map((m) => {
@@ -151,7 +138,6 @@ export function HabitProvider({ children }: { children: ReactNode }) {
         if (m.id === 'centurion' && totalCompletions >= 100) shouldUnlock = true;
         if (m.id === 'collector' && habits.length >= 5) shouldUnlock = true;
         if (m.id === 'reflective' && reflections.length >= 10) shouldUnlock = true;
-        if (m.id === 'perfect-week' && perfectDayCount >= 7) shouldUnlock = true;
         if (shouldUnlock) {
           changed = true;
           return { ...m, unlocked: true, unlockedAt: today };
