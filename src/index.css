@@ -34,12 +34,6 @@
     min-height: 100dvh;
   }
 
-  /* Dark mode overrides */
-  .dark body,
-  .dark #root {
-    background-color: #1a1a2e;
-    color: #e0e0e0;
-  }
 }
 
 /* Custom animations */
@@ -133,20 +127,6 @@
   scroll-snap-align: center;
 }
 
-/* Dark mode color overrides */
-.dark .bg-cream { background-color: #1a1a2e !important; }
-.dark .bg-white { background-color: #16213e !important; }
-.dark .bg-mint { background-color: #1a2a3a !important; }
-.dark .text-dark { color: #e0e0e0 !important; }
-.dark .text-muted { color: #8899aa !important; }
-.dark .border-gray-100 { border-color: #2a3a4a !important; }
-.dark .border-gray-200 { border-color: #2a3a4a !important; }
-.dark .bg-cream { background-color: #0f1a2e !important; }
-.dark .hover\:bg-mint:hover { background-color: #1a2a3a !important; }
-.dark .border-sage-light { border-color: #3a5a4a !important; }
-.dark .bg-red-50 { background-color: #2a1a1a !important; }
-.dark .border-red-200 { border-color: #5a2a2a !important; }
-
 /* Drag handle styling */
 .drag-handle {
   cursor: grab;
@@ -177,4 +157,32 @@
 
 .onboarding-slide-right {
   animation: onboarding-slide-in-right 0.4s ease-out both;
+}
+
+/* Tutorial animations */
+@keyframes tutorial-card-enter {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes tutorial-tooltip-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tutorial-pulse-ring {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.tutorial-card-enter {
+  animation: tutorial-card-enter 0.4s ease-out both;
+}
+
+.tutorial-tooltip-enter {
+  animation: tutorial-tooltip-enter 0.3s ease-out both;
+}
+
+.tutorial-pulse-ring {
+  animation: tutorial-pulse-ring 1.5s ease-in-out infinite;
 }

@@ -324,7 +324,7 @@ export default function Dashboard() {
                 onDragEnd={handleDragEnd}
                 className={`transition-all ${dragIndex === index ? 'opacity-50 scale-[1.02]' : ''}`}
               >
-                <HabitCard habit={habit} />
+                <HabitCard habit={habit} tutorialTarget={index === 0} />
               </div>
             ))}
           </div>

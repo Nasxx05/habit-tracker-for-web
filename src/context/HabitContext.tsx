@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction, ThemeMode } from '../types/habit';
+import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction } from '../types/habit';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { getToday } from '../utils/dateHelpers';
 import { calculateStreak, calculateLongestStreak } from '../utils/streakCalculator';
@@ -23,7 +23,6 @@ interface HabitContextType {
   profile: UserProfile;
   reflections: Reflection[];
   milestones: Milestone[];
-  theme: ThemeMode;
   undoAction: UndoAction | null;
   addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null) => void;
   deleteHabit: (id: string) => void;
@@ -36,7 +35,6 @@ interface HabitContextType {
   updateProfile: (updates: Partial<UserProfile>) => void;
   addReflection: (habitId: string, text: string) => void;
   toggleSkipDay: (habitId: string, date: string) => void;
-  setTheme: (mode: ThemeMode) => void;
   executeUndo: () => void;
   dismissUndo: () => void;
   exportData: () => string;
@@ -80,30 +78,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   const profile = useMemo(() => ({ ...rawProfile, tagline: rawProfile.tagline || '', avatar: rawProfile.avatar || '' }), [rawProfile]);
   const [reflections, setReflections] = useLocalStorage<Reflection[]>('reflections', []);
   const [milestones, setMilestones] = useLocalStorage<Milestone[]>('milestones', DEFAULT_MILESTONES);
-  const [theme, setThemeStorage] = useLocalStorage<ThemeMode>('themeMode', 'light');
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
-
-  // Apply theme to document
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', prefersDark);
-    } else {
-      root.classList.toggle('dark', theme === 'dark');
-    }
-  }, [theme]);
-
-  // Listen for system theme changes
-  useEffect(() => {
-    if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      document.documentElement.classList.toggle('dark', e.matches);
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [theme]);
 
   // Auto-dismiss undo after 5 seconds
   useEffect(() => {
@@ -354,13 +329,6 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     [setHabits]
   );
 
-  const setTheme = useCallback(
-    (mode: ThemeMode) => {
-      setThemeStorage(mode);
-    },
-    [setThemeStorage]
-  );
-
   const executeUndo = useCallback(() => {
     if (!undoAction) return;
     if (undoAction.type === 'toggle') {
@@ -435,7 +403,6 @@ export function HabitProvider({ children }: { children: ReactNode }) {
         profile,
         reflections,
         milestones,
-        theme,
         undoAction,
         addHabit,
         deleteHabit,
@@ -448,7 +415,6 @@ export function HabitProvider({ children }: { children: ReactNode }) {
         updateProfile,
         addReflection,
         toggleSkipDay,
-        setTheme,
         executeUndo,
         dismissUndo,
         exportData,
