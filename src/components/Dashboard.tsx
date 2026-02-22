@@ -45,10 +45,10 @@ export default function Dashboard() {
   const todayStr = formatDate(today);
   const isViewingToday = selectedDate === todayStr;
 
-  // Generate 6 weeks of dates
-  const dates = Array.from({ length: 42 }).map((_, i) => {
+  // Generate last 7 days + today (8 dates total)
+  const dates = Array.from({ length: 8 }).map((_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 28 + i);
+    d.setDate(today.getDate() - 7 + i);
     const dateStr = formatDate(d);
     return {
       label: DAY_LABELS[d.getDay()],
