@@ -2,6 +2,7 @@ import { useState } from 'react';
 import confetti from 'canvas-confetti';
 import type { Habit } from '../types/habit';
 import { useHabits } from '../context/HabitContext';
+import { getToday } from '../utils/dateHelpers';
 import EditHabitModal from './EditHabitModal';
 
 interface HabitCardProps {
@@ -13,7 +14,7 @@ export default function HabitCard({ habit }: HabitCardProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getToday();
   const isSkippedToday = (habit.skipDates || []).includes(todayStr);
 
   const handleToggle = (e: React.MouseEvent) => {

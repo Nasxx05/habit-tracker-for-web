@@ -80,7 +80,12 @@ export default function Dashboard() {
     ? 'Today'
     : selDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-  // Drag-to-reorder handlers
+  // Drag-to-reorder handlers — map filtered indices to full habits array indices
+  const getHabitIndex = useCallback((filteredIndex: number) => {
+    const habit = filteredHabits[filteredIndex];
+    return habits.findIndex((h) => h.id === habit?.id);
+  }, [filteredHabits, habits]);
+
   const handleDragStart = useCallback((index: number) => {
     setDragIndex(index);
   }, []);
@@ -88,10 +93,14 @@ export default function Dashboard() {
   const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (dragIndex !== null && dragIndex !== index) {
-      reorderHabits(dragIndex, index);
+      const fromIndex = getHabitIndex(dragIndex);
+      const toIndex = getHabitIndex(index);
+      if (fromIndex !== -1 && toIndex !== -1) {
+        reorderHabits(fromIndex, toIndex);
+      }
       setDragIndex(index);
     }
-  }, [dragIndex, reorderHabits]);
+  }, [dragIndex, reorderHabits, getHabitIndex]);
 
   const handleDragEnd = useCallback(() => {
     setDragIndex(null);

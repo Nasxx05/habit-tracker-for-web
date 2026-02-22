@@ -43,8 +43,9 @@ export default function WeeklyReview() {
   const totalCompleted = pastDays.reduce((sum, d) => sum + d.completed, 0);
   const weekRate = totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0;
   const perfectDays = pastDays.filter((d) => d.scheduled > 0 && d.completed === d.scheduled).length;
-  const bestDay = pastDays.reduce((best, d) => d.rate > best.rate ? d : best, pastDays[0]);
-  const worstDay = pastDays.filter((d) => d.scheduled > 0).reduce((worst, d) => d.rate < worst.rate ? d : worst, pastDays[0]);
+  const bestDay = pastDays.length > 0 ? pastDays.reduce((best, d) => d.rate > best.rate ? d : best, pastDays[0]) : null;
+  const daysWithHabits = pastDays.filter((d) => d.scheduled > 0);
+  const worstDay = daysWithHabits.length > 0 ? daysWithHabits.reduce((worst, d) => d.rate < worst.rate ? d : worst, daysWithHabits[0]) : null;
 
   // Per-habit weekly breakdown
   const habitStats = habits.map((h) => {

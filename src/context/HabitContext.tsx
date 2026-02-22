@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction, ThemeMode } from '../types/habit';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -49,18 +49,36 @@ interface HabitContextType {
 
 const HabitContext = createContext<HabitContextType | null>(null);
 
+// Ensure all habits have required fields (handles data from older versions)
+function migrateHabits(rawHabits: Habit[]): Habit[] {
+  if (!Array.isArray(rawHabits)) return [];
+  return rawHabits.filter((h) => h && typeof h === 'object' && h.id).map((h) => ({
+    ...h,
+    schedule: Array.isArray(h.schedule) ? h.schedule : [0, 1, 2, 3, 4, 5, 6],
+    skipDates: Array.isArray(h.skipDates) ? h.skipDates : [],
+    target: h.target || '',
+    reminderTime: h.reminderTime ?? null,
+    completionDates: Array.isArray(h.completionDates) ? h.completionDates : [],
+    createdAt: h.createdAt || new Date().toISOString(),
+    longestStreak: h.longestStreak || 0,
+    currentStreak: h.currentStreak || 0,
+  }));
+}
+
 export function HabitProvider({ children }: { children: ReactNode }) {
-  const [habits, setHabits] = useLocalStorage<Habit[]>('habits', []);
+  const [rawHabits, setHabits] = useLocalStorage<Habit[]>('habits', []);
+  const habits = useMemo(() => migrateHabits(rawHabits), [rawHabits]);
   const [currentView, setCurrentView] = useLocalStorage<View>('currentView', 'welcome');
   const [hasVisitedBefore, setHasVisitedBefore] = useLocalStorage<boolean>('hasVisited', false);
   const [lastActiveDate, setLastActiveDate] = useLocalStorage<string>('lastActiveDate', '');
   const [selectedHabitId, setSelectedHabitId] = useLocalStorage<string | null>('selectedHabitId', null);
-  const [profile, setProfile] = useLocalStorage<UserProfile>('userProfile', {
+  const [rawProfile, setProfile] = useLocalStorage<UserProfile>('userProfile', {
     name: 'User',
     tagline: '',
     joinDate: new Date().toISOString(),
     avatar: '',
   });
+  const profile = useMemo(() => ({ ...rawProfile, tagline: rawProfile.tagline || '', avatar: rawProfile.avatar || '' }), [rawProfile]);
   const [reflections, setReflections] = useLocalStorage<Reflection[]>('reflections', []);
   const [milestones, setMilestones] = useLocalStorage<Milestone[]>('milestones', DEFAULT_MILESTONES);
   const [theme, setThemeStorage] = useLocalStorage<ThemeMode>('themeMode', 'light');
@@ -95,20 +113,13 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [undoAction]);
 
-  // Migrate old habits without skipDates
+  // Persist migrated habits back to storage if needed
   useEffect(() => {
-    setHabits((prev: Habit[]) => {
-      let changed = false;
-      const updated = prev.map((h) => {
-        if (!h.skipDates) {
-          changed = true;
-          return { ...h, skipDates: [] };
-        }
-        return h;
-      });
-      return changed ? updated : prev;
-    });
-  }, [setHabits]);
+    const needsMigration = rawHabits.some((h) => !h.schedule || !h.skipDates || h.target === undefined);
+    if (needsMigration) {
+      setHabits(migrateHabits(rawHabits));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check and unlock milestones
   useEffect(() => {
