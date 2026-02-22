@@ -50,14 +50,18 @@ interface HabitContextType {
 const HabitContext = createContext<HabitContextType | null>(null);
 
 // Ensure all habits have required fields (handles data from older versions)
-function migrateHabits(habits: Habit[]): Habit[] {
-  return habits.map((h) => ({
+function migrateHabits(rawHabits: Habit[]): Habit[] {
+  if (!Array.isArray(rawHabits)) return [];
+  return rawHabits.filter((h) => h && typeof h === 'object' && h.id).map((h) => ({
     ...h,
-    schedule: h.schedule || [0, 1, 2, 3, 4, 5, 6],
-    skipDates: h.skipDates || [],
+    schedule: Array.isArray(h.schedule) ? h.schedule : [0, 1, 2, 3, 4, 5, 6],
+    skipDates: Array.isArray(h.skipDates) ? h.skipDates : [],
     target: h.target || '',
     reminderTime: h.reminderTime ?? null,
-    completionDates: h.completionDates || [],
+    completionDates: Array.isArray(h.completionDates) ? h.completionDates : [],
+    createdAt: h.createdAt || new Date().toISOString(),
+    longestStreak: h.longestStreak || 0,
+    currentStreak: h.currentStreak || 0,
   }));
 }
 
