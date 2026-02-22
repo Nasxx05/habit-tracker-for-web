@@ -32,7 +32,7 @@ export default function BottomNav() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+    <div data-tutorial="bottom-nav" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
       <div className="max-w-3xl mx-auto flex items-center relative">
         {leftItems.map(renderTab)}
         <div className="flex-1" />
@@ -40,6 +40,7 @@ export default function BottomNav() {
 
         <div className="absolute inset-x-0 -top-6 flex justify-center pointer-events-none">
           <button
+            data-tutorial="fab"
             onClick={() => {
               setCurrentView('home');
               window.dispatchEvent(new CustomEvent('open-add-habit'));

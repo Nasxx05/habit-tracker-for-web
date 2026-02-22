@@ -10,9 +10,10 @@ const SWIPE_OPEN_X = -80;
 
 interface HabitCardProps {
   habit: Habit;
+  tutorialTarget?: boolean;
 }
 
-export default function HabitCard({ habit }: HabitCardProps) {
+export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   const { toggleHabit, selectHabit, toggleSkipDay } = useHabits();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -173,6 +174,7 @@ export default function HabitCard({ habit }: HabitCardProps) {
             <button
               onClick={handleToggle}
               disabled={isSkippedToday}
+              data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
               className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
                 isSkippedToday
                   ? 'bg-peach-light text-peach cursor-not-allowed'
