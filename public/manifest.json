@@ -1,11 +1,11 @@
 {
-  "name": "Habit Streak Tracker",
-  "short_name": "Habits",
+  "name": "Streakly",
+  "short_name": "Streakly",
   "description": "Build better habits, one day at a time",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#667eea",
+  "background_color": "#F5F5F0",
+  "theme_color": "#2D4A3E",
   "icons": [
     {
       "src": "/icon-192.png",

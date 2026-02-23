@@ -46,7 +46,7 @@ export default function DesktopBlocker() {
           lineHeight: 1.6,
           marginBottom: '2rem',
         }}>
-          Habit Streak Tracker is designed for mobile devices.
+          Streakly is designed for mobile devices.
           Please open this site on your phone for the best experience.
         </p>
         <div style={{

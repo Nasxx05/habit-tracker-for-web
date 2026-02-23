@@ -1,4 +1,4 @@
-const CACHE_NAME = 'habit-tracker-v3';
+const CACHE_NAME = 'streakly-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
