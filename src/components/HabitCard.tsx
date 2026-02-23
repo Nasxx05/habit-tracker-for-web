@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import type { Habit } from '../types/habit';
 import { useHabits } from '../context/HabitContext';
@@ -16,7 +16,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const isFirstCompletion = habit.completionDates.length === 0;
+  const wasFirstCompletionRef = useRef(false);
 
   const todayStr = getToday();
   const isSkippedToday = (habit.skipDates || []).includes(todayStr);
@@ -25,6 +25,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
     e.stopPropagation();
     if (isSkippedToday) return;
     if (!habit.isCompletedToday) {
+      wasFirstCompletionRef.current = habit.completionDates.length === 0;
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 400);
       const newStreak = habit.currentStreak + 1;
@@ -112,7 +113,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
         isOpen={showCelebration}
         onClose={() => {
           setShowCelebration(false);
-          if (!hasCollectedDetails && isFirstCompletion) {
+          if (!hasCollectedDetails && wasFirstCompletionRef.current) {
             setTimeout(() => setShowDetailsModal(true), 300);
           }
         }}
