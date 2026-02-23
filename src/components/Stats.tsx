@@ -1,5 +1,6 @@
 import { useHabits } from '../context/HabitContext';
 import { getToday, formatDate, getMonthName } from '../utils/dateHelpers';
+import HeatmapChart from './HeatmapChart';
 
 export default function Stats() {
   const { habits, setCurrentView } = useHabits();
@@ -102,6 +103,14 @@ export default function Stats() {
             <p className="text-3xl font-bold text-forest mt-1">{perfectDays}</p>
             <p className="text-xs text-muted mt-1">Days this month</p>
           </div>
+        </div>
+      </section>
+
+      {/* Activity Heatmap */}
+      <section className="px-4 pt-6">
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">ACTIVITY</h2>
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <HeatmapChart habits={habits} todayStr={todayStr} />
         </div>
       </section>
 
