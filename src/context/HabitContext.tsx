@@ -24,6 +24,8 @@ interface HabitContextType {
   reflections: Reflection[];
   milestones: Milestone[];
   undoAction: UndoAction | null;
+  hasCollectedDetails: boolean;
+  setHasCollectedDetails: (value: boolean) => void;
   addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null) => void;
   deleteHabit: (id: string) => void;
   toggleHabit: (id: string) => void;
@@ -78,6 +80,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   const profile = useMemo(() => ({ ...rawProfile, tagline: rawProfile.tagline || '', avatar: rawProfile.avatar || '' }), [rawProfile]);
   const [reflections, setReflections] = useLocalStorage<Reflection[]>('reflections', []);
   const [milestones, setMilestones] = useLocalStorage<Milestone[]>('milestones', DEFAULT_MILESTONES);
+  const [hasCollectedDetails, setHasCollectedDetails] = useLocalStorage<boolean>('hasCollectedDetails', false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
 
   // Auto-dismiss undo after 5 seconds
@@ -404,6 +407,8 @@ export function HabitProvider({ children }: { children: ReactNode }) {
         reflections,
         milestones,
         undoAction,
+        hasCollectedDetails,
+        setHasCollectedDetails,
         addHabit,
         deleteHabit,
         toggleHabit,

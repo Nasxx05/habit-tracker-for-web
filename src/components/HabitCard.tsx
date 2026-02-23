@@ -4,6 +4,7 @@ import type { Habit } from '../types/habit';
 import { useHabits } from '../context/HabitContext';
 import { getToday } from '../utils/dateHelpers';
 import CompletionCelebration from './CompletionCelebration';
+import PersonalDetailsModal from './PersonalDetailsModal';
 
 interface HabitCardProps {
   habit: Habit;
@@ -11,9 +12,11 @@ interface HabitCardProps {
 }
 
 export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
-  const { toggleHabit, selectHabit, toggleSkipDay } = useHabits();
+  const { toggleHabit, selectHabit, toggleSkipDay, hasCollectedDetails } = useHabits();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const isFirstCompletion = habit.completionDates.length === 0;
 
   const todayStr = getToday();
   const isSkippedToday = (habit.skipDates || []).includes(todayStr);
@@ -107,7 +110,17 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
       <CompletionCelebration
         habit={habit}
         isOpen={showCelebration}
-        onClose={() => setShowCelebration(false)}
+        onClose={() => {
+          setShowCelebration(false);
+          if (!hasCollectedDetails && isFirstCompletion) {
+            setTimeout(() => setShowDetailsModal(true), 300);
+          }
+        }}
+      />
+
+      <PersonalDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
       />
     </div>
   );
