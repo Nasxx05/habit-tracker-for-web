@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import type { Habit } from '../types/habit';
 
 interface CompletionCelebrationProps {
@@ -41,6 +42,31 @@ export default function CompletionCelebration({ habit, isOpen, onClose }: Comple
 
   if (!isOpen) return null;
 
+  const handleMoodSelect = (index: number) => {
+    setSelectedMood(index);
+
+    // Balloon burst from both sides
+    const defaults = {
+      spread: 55,
+      ticks: 80,
+      gravity: 0.6,
+      decay: 0.94,
+      startVelocity: 30,
+      shapes: ['circle' as const],
+      colors: ['#A8C5B8', '#2D4A3E', '#EAF2ED', '#E8985E', '#f5c9a3', '#c3d9cf'],
+      scalar: 1.2,
+    };
+
+    confetti({ ...defaults, particleCount: 30, origin: { x: 0.15, y: 0.7 }, angle: 60 });
+    confetti({ ...defaults, particleCount: 30, origin: { x: 0.85, y: 0.7 }, angle: 120 });
+
+    // Second wave slightly delayed
+    setTimeout(() => {
+      confetti({ ...defaults, particleCount: 20, origin: { x: 0.3, y: 0.8 }, angle: 70, startVelocity: 25 });
+      confetti({ ...defaults, particleCount: 20, origin: { x: 0.7, y: 0.8 }, angle: 110, startVelocity: 25 });
+    }, 150);
+  };
+
   const handleClose = () => {
     setClosing(true);
     setTimeout(onClose, 250);
@@ -82,7 +108,7 @@ export default function CompletionCelebration({ habit, isOpen, onClose }: Comple
             {MOODS.map((mood, i) => (
               <button
                 key={mood.emoji}
-                onClick={() => setSelectedMood(i)}
+                onClick={() => handleMoodSelect(i)}
                 className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all duration-200 cursor-pointer ${
                   selectedMood === i
                     ? 'ring-2 ring-forest ring-offset-2 bg-mint scale-110'
