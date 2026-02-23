@@ -186,3 +186,31 @@
 .tutorial-pulse-ring {
   animation: tutorial-pulse-ring 1.5s ease-in-out infinite;
 }
+
+/* Completion celebration bottom sheet */
+@keyframes celebration-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes celebration-sheet-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.celebration-sheet-in {
+  animation: celebration-sheet-up 0.3s ease-out both;
+}
+
+.celebration-sheet-out {
+  animation: celebration-sheet-down 0.25s ease-in both;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.25s ease-in both;
+}

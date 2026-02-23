@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import type { Habit } from '../types/habit';
 import { useHabits } from '../context/HabitContext';
 import { getToday } from '../utils/dateHelpers';
+import CompletionCelebration from './CompletionCelebration';
 
 interface HabitCardProps {
   habit: Habit;
@@ -12,6 +13,7 @@ interface HabitCardProps {
 export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   const { toggleHabit, selectHabit, toggleSkipDay } = useHabits();
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const todayStr = getToday();
   const isSkippedToday = (habit.skipDates || []).includes(todayStr);
@@ -28,6 +30,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }, 200);
       }
+      setTimeout(() => setShowCelebration(true), 350);
     }
     toggleHabit(habit.id);
   };
@@ -100,6 +103,12 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
           <span className="text-xs font-semibold text-peach">{habit.currentStreak} day streak</span>
         </div>
       )}
+
+      <CompletionCelebration
+        habit={habit}
+        isOpen={showCelebration}
+        onClose={() => setShowCelebration(false)}
+      />
     </div>
   );
 }
