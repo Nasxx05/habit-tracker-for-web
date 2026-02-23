@@ -35,6 +35,8 @@ export interface UserProfile {
   tagline: string;
   joinDate: string;
   avatar: string; // base64 data URL or empty string
+  age?: number;
+  sex?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
 }
 
 export interface Milestone {
