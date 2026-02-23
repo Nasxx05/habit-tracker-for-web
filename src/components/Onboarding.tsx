@@ -181,13 +181,13 @@ function Screen1() {
         className="text-3xl font-bold mb-3"
         style={{ color: '#2D4A3E', lineHeight: 1.3 }}
       >
-        Welcome
+        Welcome to Streakly
       </h1>
       <p
         className="text-base leading-relaxed"
         style={{ color: '#8A8A8A' }}
       >
-        Begin your journey to a calmer mind and better habits.
+        Build better habits and keep your streaks alive, one day at a time.
       </p>
     </>
   );
