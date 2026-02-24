@@ -17,7 +17,7 @@ type CellData = {
 const CELL_SIZE = 11;
 const CELL_GAP = 2;
 const LABEL_WIDTH = 24;
-const WEEKS_TO_SHOW = 20;
+const WEEKS_TO_SHOW = 4;
 
 // Mon=0 ... Sun=6 (GitHub layout)
 function toMonRow(jsDay: number): number {
