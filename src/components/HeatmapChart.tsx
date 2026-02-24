@@ -1,225 +1,243 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import type { Habit } from '../types/habit';
 import { formatDate, getMonthName } from '../utils/dateHelpers';
 
-interface HeatmapChartProps {
+interface WeeklyTrendProps {
   habits: Habit[];
   todayStr: string;
 }
 
-type CellData = {
-  date: string;
+type WeekData = {
+  label: string;
   rate: number;
   completed: number;
   total: number;
+  isCurrent: boolean;
 };
 
-const CELL_SIZE = 11;
-const CELL_GAP = 2;
-const LABEL_WIDTH = 24;
-const WEEKS_TO_SHOW = 4;
+const WEEKS = 4;
 
-// Mon=0 ... Sun=6 (GitHub layout)
-function toMonRow(jsDay: number): number {
-  return jsDay === 0 ? 6 : jsDay - 1;
+// Chart layout constants
+const CHART_HEIGHT = 160;
+const PLOT_TOP = 8;
+const PLOT_BOTTOM = 30;
+const PLOT_LEFT = 32;
+const PLOT_RIGHT = 16;
+
+function getMonday(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
-function getCellColor(cell: CellData | null): string {
-  if (!cell) return 'transparent';
-  if (cell.rate < 0) return 'transparent'; // no habits scheduled
-  if (cell.rate === 0) return '#e8e8e3';   // scheduled but none done
-  if (cell.rate <= 0.25) return '#EAF2ED'; // mint
-  if (cell.rate <= 0.50) return '#c3d9cf'; // sage-light
-  if (cell.rate <= 0.75) return '#A8C5B8'; // sage
-  return '#2D4A3E';                        // forest
-}
+export default function HeatmapChart({ habits, todayStr }: WeeklyTrendProps) {
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
-function formatCellDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const currentMonday = getMonday(today);
 
-export default function HeatmapChart({ habits, todayStr }: HeatmapChartProps) {
-  const [selectedCell, setSelectedCell] = useState<CellData | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // Build data for each of the last WEEKS weeks
+  const weeks: WeekData[] = [];
+  for (let w = WEEKS - 1; w >= 0; w--) {
+    const monday = new Date(currentMonday);
+    monday.setDate(monday.getDate() - w * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
 
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
+    let completed = 0;
+    let total = 0;
 
-  // Start from a Monday, WEEKS_TO_SHOW weeks back
-  const todayRow = toMonRow(todayDate.getDay());
-  const startDate = new Date(todayDate);
-  startDate.setDate(startDate.getDate() - ((WEEKS_TO_SHOW - 1) * 7 + todayRow));
+    for (let d = 0; d < 7; d++) {
+      const day = new Date(monday);
+      day.setDate(day.getDate() + d);
+      const dateStr = formatDate(day);
+      if (dateStr > todayStr) break;
 
-  // Build grid: grid[row][col] where row=day-of-week, col=week-index
-  const grid: (CellData | null)[][] = Array.from({ length: 7 }, () =>
-    Array(WEEKS_TO_SHOW).fill(null)
-  );
-
-  let activeDays = 0;
-
-  const cursor = new Date(startDate);
-  for (let week = 0; week < WEEKS_TO_SHOW; week++) {
-    for (let row = 0; row < 7; row++) {
-      const dateStr = formatDate(cursor);
-      if (dateStr <= todayStr) {
-        const dow = cursor.getDay();
-        const createdBefore = habits.filter(
-          (h) => h.schedule.includes(dow) && h.createdAt.split('T')[0] <= dateStr
-        );
-        const completed = createdBefore.filter((h) =>
-          h.completionDates.includes(dateStr)
-        ).length;
-        const total = createdBefore.length;
-        const rate = total > 0 ? completed / total : -1;
-        grid[row][week] = { date: dateStr, rate, completed, total };
-        if (completed > 0) activeDays++;
-      }
-      cursor.setDate(cursor.getDate() + 1);
+      const dow = day.getDay();
+      const scheduled = habits.filter(
+        (h) => h.schedule.includes(dow) && h.createdAt.split('T')[0] <= dateStr
+      );
+      completed += scheduled.filter((h) => h.completionDates.includes(dateStr)).length;
+      total += scheduled.length;
     }
+
+    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const monthDay = `${getMonthName(monday.getMonth()).substring(0, 3)} ${monday.getDate()}`;
+    weeks.push({
+      label: monthDay,
+      rate,
+      completed,
+      total,
+      isCurrent: w === 0,
+    });
   }
 
-  // Compute month labels based on the Monday of each week
-  const monthLabels: { col: number; label: string }[] = [];
-  let lastMonth = -1;
-  for (let week = 0; week < WEEKS_TO_SHOW; week++) {
-    const monday = new Date(startDate);
-    monday.setDate(monday.getDate() + week * 7);
-    const month = monday.getMonth();
-    if (month !== lastMonth) {
-      monthLabels.push({ col: week, label: getMonthName(month).substring(0, 3) });
-      lastMonth = month;
-    }
-  }
+  // Plot dimensions
+  const plotH = CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM;
 
-  // Auto-scroll to right end on mount (in case of overflow)
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
-    }
-  }, []);
-
-  const colStep = CELL_SIZE + CELL_GAP;
-  const dayLabels = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+  // Y-axis gridlines
+  const ySteps = [0, 25, 50, 75, 100];
 
   return (
-    <div onClick={() => setSelectedCell(null)}>
-      <div style={{ display: 'flex' }}>
-        {/* Fixed day-of-week labels */}
-        <div style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingTop: '18px' }}>
-          {dayLabels.map((label, i) => (
-            <div
-              key={i}
-              className="text-muted"
-              style={{
-                height: `${colStep}px`,
-                lineHeight: `${colStep}px`,
-                fontSize: '9px',
-              }}
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-
-        {/* Scrollable grid area */}
-        <div
-          ref={scrollRef}
-          className="hide-scrollbar"
-          style={{ flex: 1, overflowX: 'auto' }}
-        >
-          {/* Month labels */}
-          <div style={{ position: 'relative', height: '16px', marginBottom: '2px' }}>
-            {monthLabels.map((m, i) => (
+    <div>
+      {/* SVG trend line */}
+      <div style={{ position: 'relative', height: `${CHART_HEIGHT}px` }}>
+        {/* Y-axis labels + gridlines */}
+        {ySteps.map((pct) => {
+          const y = PLOT_TOP + plotH - (pct / 100) * plotH;
+          return (
+            <div key={pct} style={{ position: 'absolute', top: `${y}px`, left: 0, right: 0 }}>
               <span
-                key={i}
                 className="text-muted"
                 style={{
                   position: 'absolute',
-                  left: `${m.col * colStep}px`,
+                  left: 0,
+                  top: '-6px',
                   fontSize: '10px',
-                  whiteSpace: 'nowrap',
+                  width: `${PLOT_LEFT - 6}px`,
+                  textAlign: 'right',
                 }}
               >
-                {m.label}
+                {pct}%
               </span>
-            ))}
-          </div>
-
-          {/* Cell grid: flex row of week columns */}
-          <div style={{ display: 'flex', gap: `${CELL_GAP}px` }}>
-            {Array.from({ length: WEEKS_TO_SHOW }).map((_, week) => (
               <div
-                key={week}
-                style={{ display: 'flex', flexDirection: 'column', gap: `${CELL_GAP}px` }}
-              >
-                {Array.from({ length: 7 }).map((_, row) => {
-                  const cell = grid[row][week];
-                  const bg = getCellColor(cell);
-                  const isSelected = selectedCell?.date === cell?.date;
-                  return (
-                    <div
-                      key={row}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (cell && cell.rate >= 0) {
-                          setSelectedCell(isSelected ? null : cell);
-                        }
-                      }}
-                      style={{
-                        width: `${CELL_SIZE}px`,
-                        height: `${CELL_SIZE}px`,
-                        borderRadius: '2px',
-                        backgroundColor: bg,
-                        cursor: cell && cell.rate >= 0 ? 'pointer' : 'default',
-                        outline: isSelected ? '2px solid #2D4A3E' : 'none',
-                        outlineOffset: '-1px',
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+                style={{
+                  marginLeft: `${PLOT_LEFT}px`,
+                  marginRight: `${PLOT_RIGHT}px`,
+                  height: '1px',
+                  backgroundColor: pct === 0 ? '#ddd' : '#f0f0ec',
+                }}
+              />
+            </div>
+          );
+        })}
 
-      {/* Legend + active days */}
-      <div className="flex items-center justify-between mt-3">
-        <span className="text-xs text-muted">{activeDays} active days</span>
-        <div className="flex items-center gap-1">
-          <span className="text-muted" style={{ fontSize: '10px' }}>Less</span>
-          {['#e8e8e3', '#EAF2ED', '#c3d9cf', '#A8C5B8', '#2D4A3E'].map((color, i) => (
-            <div
-              key={i}
-              style={{
-                width: `${CELL_SIZE}px`,
-                height: `${CELL_SIZE}px`,
-                borderRadius: '2px',
-                backgroundColor: color,
-              }}
-            />
-          ))}
-          <span className="text-muted" style={{ fontSize: '10px' }}>More</span>
-        </div>
-      </div>
-
-      {/* Selected cell detail */}
-      {selectedCell && (
+        {/* Data points, line, and X labels — absolutely positioned within plot area */}
         <div
-          className="mt-3 bg-cream rounded-xl px-3 py-2.5 flex items-center justify-between animate-fade-in"
-          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: `${PLOT_TOP}px`,
+            left: `${PLOT_LEFT}px`,
+            right: `${PLOT_RIGHT}px`,
+            height: `${plotH}px`,
+          }}
         >
+          {/* Connecting lines (SVG overlay) */}
+          <svg
+            style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+            preserveAspectRatio="none"
+          >
+            {weeks.map((w, i) => {
+              if (i === 0) return null;
+              const prev = weeks[i - 1];
+              const segments = weeks.length - 1;
+              const x1 = `${((i - 1) / segments) * 100}%`;
+              const y1 = plotH - (prev.rate / 100) * plotH;
+              const x2 = `${(i / segments) * 100}%`;
+              const y2 = plotH - (w.rate / 100) * plotH;
+              return (
+                <line
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#A8C5B8"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Data points + X-axis labels */}
+          {weeks.map((w, i) => {
+            const segments = weeks.length - 1;
+            const xPct = segments > 0 ? (i / segments) * 100 : 50;
+            const yPos = plotH - (w.rate / 100) * plotH;
+            const isActive = activeIdx === i;
+
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: `${xPct}%`,
+                  top: 0,
+                  height: '100%',
+                  transform: 'translateX(-50%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  width: '48px',
+                }}
+                onClick={() => setActiveIdx(isActive ? null : i)}
+              >
+                {/* Rate label above dot */}
+                <div
+                  className="animate-fade-in"
+                  style={{
+                    position: 'absolute',
+                    top: `${yPos - 20}px`,
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#2D4A3E',
+                    opacity: isActive ? 1 : 0,
+                    transition: 'opacity 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {w.rate}%
+                </div>
+
+                {/* Dot */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: `${yPos - 6}px`,
+                    width: isActive ? '14px' : '10px',
+                    height: isActive ? '14px' : '10px',
+                    borderRadius: '50%',
+                    backgroundColor: w.isCurrent ? '#2D4A3E' : '#A8C5B8',
+                    border: '2.5px solid #fff',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    transition: 'all 0.15s',
+                  }}
+                />
+
+                {/* X-axis label */}
+                <span
+                  className="text-muted"
+                  style={{
+                    position: 'absolute',
+                    bottom: `-${PLOT_BOTTOM - 4}px`,
+                    fontSize: '10px',
+                    whiteSpace: 'nowrap',
+                    fontWeight: w.isCurrent ? 600 : 400,
+                    color: w.isCurrent ? '#2D4A3E' : undefined,
+                  }}
+                >
+                  {w.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected week detail */}
+      {activeIdx !== null && (
+        <div className="mt-2 bg-cream rounded-xl px-3 py-2.5 flex items-center justify-between animate-fade-in">
           <span className="text-xs font-semibold text-dark">
-            {formatCellDate(selectedCell.date)}
+            Week of {weeks[activeIdx].label}{weeks[activeIdx].isCurrent ? ' (current)' : ''}
           </span>
           <span className="text-xs text-muted">
-            {selectedCell.completed}/{selectedCell.total} done · {Math.round(selectedCell.rate * 100)}%
+            {weeks[activeIdx].completed}/{weeks[activeIdx].total} done
           </span>
         </div>
       )}

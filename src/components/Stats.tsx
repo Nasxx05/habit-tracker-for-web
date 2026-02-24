@@ -106,9 +106,9 @@ export default function Stats() {
         </div>
       </section>
 
-      {/* Activity Heatmap */}
+      {/* Weekly Trend */}
       <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">ACTIVITY</h2>
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">WEEKLY TREND</h2>
         <div className="bg-white rounded-2xl p-5 shadow-sm">
           <HeatmapChart habits={habits} todayStr={todayStr} />
         </div>
