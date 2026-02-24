@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import type { Habit } from '../types/habit';
 import { useHabits } from '../context/HabitContext';
-import { getToday } from '../utils/dateHelpers';
 import CompletionCelebration from './CompletionCelebration';
 import PersonalDetailsModal from './PersonalDetailsModal';
 
@@ -12,18 +11,14 @@ interface HabitCardProps {
 }
 
 export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
-  const { toggleHabit, selectHabit, toggleSkipDay, hasCollectedDetails } = useHabits();
+  const { toggleHabit, selectHabit, hasCollectedDetails } = useHabits();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const wasFirstCompletionRef = useRef(false);
 
-  const todayStr = getToday();
-  const isSkippedToday = (habit.skipDates || []).includes(todayStr);
-
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isSkippedToday) return;
     if (!habit.isCompletedToday) {
       wasFirstCompletionRef.current = habit.completionDates.length === 0;
       setIsAnimating(true);
@@ -39,40 +34,21 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
     toggleHabit(habit.id);
   };
 
-  const handleSkipToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleSkipDay(habit.id, todayStr);
-  };
-
   const handleCardClick = () => {
     selectHabit(habit.id);
   };
 
-  const subtitle = isSkippedToday
-    ? 'Rest Day — streak protected'
-    : habit.isCompletedToday
-      ? `${habit.target || habit.category} · Done`
-      : `${habit.target || habit.category} · Not started`;
+  const subtitle = habit.isCompletedToday
+    ? `${habit.target || habit.category} · Done`
+    : `${habit.target || habit.category} · Not started`;
 
   return (
     <div
       onClick={handleCardClick}
       className={`relative bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 ${
         isAnimating ? 'scale-[1.02]' : ''
-      } ${isSkippedToday ? 'opacity-60' : ''}`}
+      }`}
     >
-      {/* Skip button */}
-      <div className="absolute top-3 right-3">
-        <button
-          onClick={handleSkipToggle}
-          className="w-7 h-7 flex items-center justify-center rounded-full text-xs text-muted hover:bg-mint hover:text-forest transition cursor-pointer opacity-40 hover:opacity-100"
-          aria-label={isSkippedToday ? 'Remove skip' : 'Skip today'}
-          title={isSkippedToday ? 'Remove rest day' : 'Mark as rest day'}
-        >
-          💤
-        </button>
-      </div>
-
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 bg-mint rounded-xl flex items-center justify-center text-2xl shrink-0">
           {habit.emoji}
@@ -85,23 +61,20 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
 
         <button
           onClick={handleToggle}
-          disabled={isSkippedToday}
           data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
           className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
-            isSkippedToday
-              ? 'bg-peach-light text-peach cursor-not-allowed'
-              : habit.isCompletedToday
-                ? 'bg-sage text-white shadow-sm'
-                : 'border-2 border-sage-light text-sage hover:border-sage hover:bg-mint'
+            habit.isCompletedToday
+              ? 'bg-sage text-white shadow-sm'
+              : 'border-2 border-sage-light text-sage hover:border-sage hover:bg-mint'
           } ${isAnimating ? 'animate-bounce-once' : ''}`}
           aria-label={habit.isCompletedToday ? 'Mark as incomplete' : 'Mark as complete'}
         >
-          {isSkippedToday ? '💤' : habit.isCompletedToday ? '✓' : '+'}
+          {habit.isCompletedToday ? '✓' : '+'}
         </button>
       </div>
 
       {/* Streak indicator */}
-      {habit.currentStreak > 0 && !isSkippedToday && (
+      {habit.currentStreak > 0 && (
         <div className="mt-2 flex items-center gap-1">
           <span className="text-xs">🔥</span>
           <span className="text-xs font-semibold text-peach">{habit.currentStreak} day streak</span>
