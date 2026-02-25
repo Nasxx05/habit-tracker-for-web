@@ -20,13 +20,9 @@ export default function BottomNav() {
       <button
         key={item.view}
         onClick={() => setCurrentView(item.view)}
-        className="flex-1 flex flex-col items-center py-2 cursor-pointer"
+        className="flex-1 flex items-center justify-center py-3 cursor-pointer"
       >
-        <span className={`text-xl ${isActive ? '' : 'opacity-50'}`}>{item.icon}</span>
-        <span className={`text-xs mt-0.5 ${isActive ? 'text-forest font-semibold' : 'text-muted'}`}>
-          {item.label}
-        </span>
-        {isActive && <div className="w-1 h-1 rounded-full bg-forest mt-0.5" />}
+        <span className={`text-2xl ${isActive ? '' : 'opacity-40'}`}>{item.icon}</span>
       </button>
     );
   };
