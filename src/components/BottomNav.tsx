@@ -1,3 +1,4 @@
+import React from 'react';
 import { useHabits } from '../context/HabitContext';
 import type { View } from '../types/habit';
 
@@ -34,12 +35,12 @@ function ProfileIcon({ active }: { active: boolean }) {
   );
 }
 
-const leftItems: { view: View; icon: (active: boolean) => JSX.Element }[] = [
+const leftItems: { view: View; icon: (active: boolean) => React.ReactNode }[] = [
   { view: 'home', icon: (active) => <HomeIcon active={active} /> },
   { view: 'calendar', icon: (active) => <CalendarIcon active={active} /> },
 ];
 
-const rightItems: { view: View; icon: (active: boolean) => JSX.Element }[] = [
+const rightItems: { view: View; icon: (active: boolean) => React.ReactNode }[] = [
   { view: 'stats', icon: (active) => <ChartIcon active={active} /> },
   { view: 'profile', icon: (active) => <ProfileIcon active={active} /> },
 ];
@@ -47,7 +48,7 @@ const rightItems: { view: View; icon: (active: boolean) => JSX.Element }[] = [
 export default function BottomNav() {
   const { currentView, setCurrentView } = useHabits();
 
-  const renderTab = (item: { view: View; icon: (active: boolean) => JSX.Element }) => {
+  const renderTab = (item: { view: View; icon: (active: boolean) => React.ReactNode }) => {
     const isActive = currentView === item.view || (item.view === 'home' && currentView === 'weekly-review');
     return (
       <button
