@@ -99,7 +99,12 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         return;
       }
       // Cloud exists — use it (cloud is source of truth)
-      if (cloud.habits?.length) setHabits(cloud.habits);
+      if (cloud.habits?.length) {
+        setHabits(cloud.habits);
+        // If synced habits already have completions, skip the personal details prompt
+        const hasCompletions = cloud.habits.some((h) => h.completionDates?.length > 0);
+        if (hasCompletions) setHasCollectedDetails(true);
+      }
       if (cloud.profile?.name) setProfile(cloud.profile);
       if (cloud.reflections?.length) setReflections(cloud.reflections);
       if (cloud.milestones?.length) setMilestones(cloud.milestones);

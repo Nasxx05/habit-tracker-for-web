@@ -6,18 +6,16 @@ interface PersonalDetailsModalProps {
   onClose: () => void;
 }
 
-const SEX_OPTIONS: { value: 'male' | 'female' | 'other' | 'prefer-not-to-say'; label: string; icon: string }[] = [
+const SEX_OPTIONS: { value: 'male' | 'female'; label: string; icon: string }[] = [
   { value: 'male', label: 'Male', icon: '♂' },
   { value: 'female', label: 'Female', icon: '♀' },
-  { value: 'other', label: 'Other', icon: '⚧' },
-  { value: 'prefer-not-to-say', label: 'Skip', icon: '—' },
 ];
 
 export default function PersonalDetailsModal({ isOpen, onClose }: PersonalDetailsModalProps) {
   const { updateProfile, setHasCollectedDetails } = useHabits();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
-  const [sex, setSex] = useState<'male' | 'female' | 'other' | 'prefer-not-to-say' | null>(null);
+  const [sex, setSex] = useState<'male' | 'female' | null>(null);
   const [closing, setClosing] = useState(false);
 
   if (!isOpen) return null;
