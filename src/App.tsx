@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { HabitProvider, useHabits } from './context/HabitContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import WelcomeScreen from './components/WelcomeScreen';
 import Dashboard from './components/Dashboard';
 import Calendar from './components/Calendar';
@@ -81,12 +82,21 @@ function AppContent() {
   );
 }
 
+function AppWithAuth() {
+  const { user } = useAuth();
+  return (
+    <HabitProvider syncUserId={user?.id ?? null}>
+      <AppContent />
+    </HabitProvider>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <HabitProvider>
-        <AppContent />
-      </HabitProvider>
+      <AuthProvider>
+        <AppWithAuth />
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

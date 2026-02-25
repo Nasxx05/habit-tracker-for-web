@@ -1,13 +1,59 @@
 import { useState, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from './AuthModal';
 
 export default function Profile() {
-  const { habits, profile, updateProfile, milestones, setCurrentView } = useHabits();
+  const { habits, profile, updateProfile, milestones, setCurrentView, exportData, importData } = useHabits();
+  const { user, signOut } = useAuth();
   const [editingName, setEditingName] = useState(false);
   const [editingTagline, setEditingTagline] = useState(false);
   const [nameInput, setNameInput] = useState(profile.name);
   const [taglineInput, setTaglineInput] = useState(profile.tagline);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [importMsg, setImportMsg] = useState('');
+
+  const handleExportJSON = () => {
+    const json = exportData();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `streakly-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportCSV = () => {
+    const rows = ['Habit,Emoji,Category,Date,Completed'];
+    habits.forEach((h) => {
+      h.completionDates.forEach((date) => {
+        rows.push(`"${h.name}","${h.emoji}","${h.category}","${date}","Yes"`);
+      });
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `streakly-data-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const ok = importData(reader.result as string);
+      setImportMsg(ok ? 'Data restored successfully!' : 'Invalid backup file.');
+      setTimeout(() => setImportMsg(''), 3000);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -175,6 +221,74 @@ export default function Profile() {
           ))}
         </div>
       </section>
+
+      {/* Cloud Sync */}
+      <section className="px-4 pt-6">
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">CLOUD SYNC</h2>
+        {user ? (
+          <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">☁️</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-dark">Synced</p>
+                <p className="text-xs text-muted truncate">{user.email}</p>
+              </div>
+              <div className="w-2.5 h-2.5 bg-green-400 rounded-full" />
+            </div>
+            <button
+              onClick={signOut}
+              className="w-full py-2.5 text-sm text-muted font-medium border border-gray-200 rounded-xl hover:bg-cream transition cursor-pointer"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="w-full bg-white rounded-2xl p-5 shadow-sm flex items-center gap-3 hover:bg-mint/30 transition cursor-pointer"
+          >
+            <div className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">🔐</div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold text-dark">Sign in to sync</p>
+              <p className="text-xs text-muted">Keep your streaks safe across devices</p>
+            </div>
+            <span className="text-muted text-sm">›</span>
+          </button>
+        )}
+      </section>
+
+      {/* Data Management */}
+      <section className="px-4 pt-6">
+        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">DATA</h2>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <button onClick={handleExportJSON}
+            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer border-b border-gray-100">
+            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📥</span>
+            <span className="text-sm font-medium text-dark flex-1 text-left">Export Backup (JSON)</span>
+            <span className="text-muted text-sm">›</span>
+          </button>
+          <button onClick={handleExportCSV}
+            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer border-b border-gray-100">
+            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📊</span>
+            <span className="text-sm font-medium text-dark flex-1 text-left">Export Data (CSV)</span>
+            <span className="text-muted text-sm">›</span>
+          </button>
+          <button onClick={() => importInputRef.current?.click()}
+            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer">
+            <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">📤</span>
+            <span className="text-sm font-medium text-dark flex-1 text-left">Restore from Backup</span>
+            <span className="text-muted text-sm">›</span>
+          </button>
+          <input ref={importInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+        </div>
+        {importMsg && (
+          <p className={`text-sm text-center mt-2 ${importMsg.includes('success') ? 'text-forest' : 'text-red-500'}`}>
+            {importMsg}
+          </p>
+        )}
+      </section>
+
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }

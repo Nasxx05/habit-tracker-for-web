@@ -1,9 +1,10 @@
-import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction } from '../types/habit';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { getToday } from '../utils/dateHelpers';
 import { calculateStreak, calculateLongestStreak } from '../utils/streakCalculator';
+import { uploadData, downloadData } from '../lib/sync';
 
 const DEFAULT_MILESTONES: Milestone[] = [
   { id: 'first-step', name: 'First Step', description: 'Complete 1 habit', icon: '🌱', unlocked: false, unlockedAt: null },
@@ -64,7 +65,7 @@ function migrateHabits(rawHabits: Habit[]): Habit[] {
   }));
 }
 
-export function HabitProvider({ children }: { children: ReactNode }) {
+export function HabitProvider({ children, syncUserId }: { children: ReactNode; syncUserId?: string | null }) {
   const [rawHabits, setHabits] = useLocalStorage<Habit[]>('habits', []);
   const habits = useMemo(() => migrateHabits(rawHabits), [rawHabits]);
   const [currentView, setCurrentView] = useLocalStorage<View>('currentView', 'welcome');
@@ -82,6 +83,38 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   const [milestones, setMilestones] = useLocalStorage<Milestone[]>('milestones', DEFAULT_MILESTONES);
   const [hasCollectedDetails, setHasCollectedDetails] = useLocalStorage<boolean>('hasCollectedDetails', false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+
+  // --- Cloud sync ---
+  const hasSyncedRef = useRef(false);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Download from cloud on first sign-in
+  useEffect(() => {
+    if (!syncUserId || hasSyncedRef.current) return;
+    hasSyncedRef.current = true;
+    downloadData(syncUserId).then((cloud) => {
+      if (!cloud) {
+        // No cloud data yet — push local data up
+        uploadData(syncUserId, { habits, profile, reflections, milestones });
+        return;
+      }
+      // Cloud exists — use it (cloud is source of truth)
+      if (cloud.habits?.length) setHabits(cloud.habits);
+      if (cloud.profile?.name) setProfile(cloud.profile);
+      if (cloud.reflections?.length) setReflections(cloud.reflections);
+      if (cloud.milestones?.length) setMilestones(cloud.milestones);
+    });
+  }, [syncUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced upload on data changes (after initial sync)
+  useEffect(() => {
+    if (!syncUserId || !hasSyncedRef.current) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      uploadData(syncUserId, { habits, profile, reflections, milestones });
+    }, 2000);
+    return () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); };
+  }, [syncUserId, habits, profile, reflections, milestones]);
 
   // Auto-dismiss undo after 5 seconds
   useEffect(() => {
