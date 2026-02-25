@@ -54,7 +54,7 @@ export default function BottomNav() {
       <button
         key={item.view}
         onClick={() => setCurrentView(item.view)}
-        className="flex-1 flex items-center justify-center py-3 cursor-pointer"
+        className="flex-1 flex items-center justify-center py-5 cursor-pointer"
       >
         {item.icon(isActive)}
       </button>
