@@ -214,3 +214,50 @@
 .animate-fade-out {
   animation: fade-out 0.25s ease-in both;
 }
+
+/* Streak loss animations */
+@keyframes flame-out {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  40% { transform: scale(1.3); opacity: 1; filter: brightness(1.3); }
+  100% { transform: scale(0.3); opacity: 0; filter: brightness(0.3) grayscale(1); }
+}
+
+@keyframes smoke-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  30% { opacity: 0.7; transform: translateY(-8px) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(1.3); }
+}
+
+@keyframes counter-shake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-6px); }
+  20% { transform: translateX(6px); }
+  30% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  50% { transform: translateX(-2px); }
+  60% { transform: translateX(2px); }
+  70% { transform: translateX(0); }
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.streak-loss-flame {
+  animation: flame-out 1s ease-out 0.3s forwards;
+}
+
+.streak-loss-smoke {
+  animation: smoke-rise 1.2s ease-out 0.8s forwards;
+}
+
+.streak-loss-counter {
+  animation: counter-shake 0.6s ease-out 0.2s;
+}
+
+.badge-pop {
+  animation: badge-pop 0.5s ease-out;
+}

@@ -1,9 +1,9 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction } from '../types/habit';
+import type { Habit, View, Reflection, UserProfile, Milestone, UndoAction, StreakBadge } from '../types/habit';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { getToday } from '../utils/dateHelpers';
-import { calculateStreak, calculateLongestStreak } from '../utils/streakCalculator';
+import { getToday, formatDate } from '../utils/dateHelpers';
+import { calculateStreak, calculateLongestStreak, STREAK_MILESTONES } from '../utils/streakCalculator';
 import { uploadData, downloadData } from '../lib/sync';
 
 const DEFAULT_MILESTONES: Milestone[] = [
@@ -16,6 +16,34 @@ const DEFAULT_MILESTONES: Milestone[] = [
   { id: 'reflective', name: 'Reflective', description: '10 Reflections', icon: '📝', unlocked: false, unlockedAt: null },
 ];
 
+function getISOWeekKey(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+  return `${d.getFullYear()}-W${weekNum}`;
+}
+
+interface FreezeEvent {
+  habitId: string;
+  habitName: string;
+  habitEmoji: string;
+}
+
+interface StreakLossEvent {
+  habitId: string;
+  habitName: string;
+  habitEmoji: string;
+  lostStreak: number;
+}
+
+interface BadgeEvent {
+  milestone: number;
+  habitName: string;
+  habitEmoji: string;
+}
+
 interface HabitContextType {
   habits: Habit[];
   currentView: View;
@@ -26,6 +54,11 @@ interface HabitContextType {
   milestones: Milestone[];
   undoAction: UndoAction | null;
   hasCollectedDetails: boolean;
+  streakBadges: StreakBadge[];
+  freezeEvent: FreezeEvent | null;
+  streakLossEvent: StreakLossEvent | null;
+  badgeEvent: BadgeEvent | null;
+  freezeAvailable: boolean;
   setHasCollectedDetails: (value: boolean) => void;
   addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null) => void;
   deleteHabit: (id: string) => void;
@@ -40,6 +73,9 @@ interface HabitContextType {
   toggleSkipDay: (habitId: string, date: string) => void;
   executeUndo: () => void;
   dismissUndo: () => void;
+  dismissFreezeEvent: () => void;
+  dismissStreakLossEvent: () => void;
+  dismissBadgeEvent: () => void;
   exportData: () => string;
   importData: (json: string) => boolean;
   completedToday: number;
@@ -56,6 +92,7 @@ function migrateHabits(rawHabits: Habit[]): Habit[] {
     ...h,
     schedule: Array.isArray(h.schedule) ? h.schedule : [0, 1, 2, 3, 4, 5, 6],
     skipDates: Array.isArray(h.skipDates) ? h.skipDates : [],
+    freezeDates: Array.isArray(h.freezeDates) ? h.freezeDates : [],
     target: h.target || '',
     reminderTime: h.reminderTime ?? null,
     completionDates: Array.isArray(h.completionDates) ? h.completionDates : [],
@@ -84,6 +121,20 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
   const [hasCollectedDetails, setHasCollectedDetails] = useLocalStorage<boolean>('hasCollectedDetails', false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
 
+  // Streak freeze state
+  const [streakFreezeWeek, setStreakFreezeWeek] = useLocalStorage<string>('streakFreezeWeek', '');
+  const [freezeEvent, setFreezeEvent] = useState<FreezeEvent | null>(null);
+
+  // Streak loss state
+  const [streakLossEvent, setStreakLossEvent] = useState<StreakLossEvent | null>(null);
+
+  // Streak badges
+  const [streakBadges, setStreakBadges] = useLocalStorage<StreakBadge[]>('streakBadges', []);
+  const [badgeEvent, setBadgeEvent] = useState<BadgeEvent | null>(null);
+
+  const currentWeek = getISOWeekKey(new Date());
+  const freezeAvailable = streakFreezeWeek !== currentWeek;
+
   // --- Cloud sync ---
   const hasSyncedRef = useRef(false);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,14 +145,11 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
     hasSyncedRef.current = true;
     downloadData(syncUserId).then((cloud) => {
       if (!cloud) {
-        // No cloud data yet — push local data up
         uploadData(syncUserId, { habits, profile, reflections, milestones });
         return;
       }
-      // Cloud exists — use it (cloud is source of truth)
       if (cloud.habits?.length) {
         setHabits(cloud.habits);
-        // If synced habits already have completions, skip the personal details prompt
         const hasCompletions = cloud.habits.some((h) => h.completionDates?.length > 0);
         if (hasCompletions) setHasCollectedDetails(true);
       }
@@ -130,7 +178,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
 
   // Persist migrated habits back to storage if needed
   useEffect(() => {
-    const needsMigration = rawHabits.some((h) => !h.schedule || !h.skipDates || h.target === undefined);
+    const needsMigration = rawHabits.some((h) => !h.schedule || !h.skipDates || h.target === undefined || !Array.isArray(h.freezeDates));
     if (needsMigration) {
       setHabits(migrateHabits(rawHabits));
     }
@@ -164,21 +212,99 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
     });
   }, [habits, reflections, setMilestones]);
 
-  // Reset daily completion status when the day changes
+  // Reset daily completion status when the day changes — with freeze logic
   useEffect(() => {
     const today = getToday();
     if (lastActiveDate && lastActiveDate !== today) {
-      setHabits((prev: Habit[]) =>
-        prev.map((habit) => ({
-          ...habit,
-          skipDates: habit.skipDates || [],
-          isCompletedToday: habit.completionDates.includes(today),
-          currentStreak: calculateStreak(habit.completionDates, habit.completionDates.includes(today), habit.skipDates || []),
-        }))
-      );
+      const missedDate = lastActiveDate; // The day that was missed
+      const missedDateObj = new Date(missedDate + 'T12:00:00');
+      const missedDow = missedDateObj.getDay();
+      const week = getISOWeekKey(new Date());
+      let freezeUsedThisReset = streakFreezeWeek === week;
+      let freezeAppliedTo: FreezeEvent | null = null;
+      let streakLost: StreakLossEvent | null = null;
+
+      setHabits((prev: Habit[]) => {
+        // Find habit with highest streak that missed yesterday (for freeze priority)
+        const habitsNeedingFreeze = prev
+          .filter((h) => {
+            if (!h.schedule.includes(missedDow)) return false; // Not scheduled
+            if (h.completionDates.includes(missedDate)) return false; // Was completed
+            if ((h.skipDates || []).includes(missedDate)) return false; // Was skipped
+            if ((h.freezeDates || []).includes(missedDate)) return false; // Already frozen
+            const streak = calculateStreak(h.completionDates, false, h.skipDates || [], h.freezeDates || []);
+            // Check if this habit HAD a streak before missing
+            // We need to check if the day before missedDate was part of a streak
+            const dayBefore = new Date(missedDateObj);
+            dayBefore.setDate(dayBefore.getDate() - 1);
+            const dayBeforeStr = formatDate(dayBefore);
+            const hadStreak = h.completionDates.includes(dayBeforeStr) ||
+              (h.skipDates || []).includes(dayBeforeStr) ||
+              (h.freezeDates || []).includes(dayBeforeStr);
+            return hadStreak || streak > 0;
+          })
+          .sort((a, b) => b.currentStreak - a.currentStreak);
+
+        return prev.map((habit) => {
+          const freezeDates = habit.freezeDates || [];
+          const skipDates = habit.skipDates || [];
+          const wasScheduled = habit.schedule.includes(missedDow);
+          const wasCompleted = habit.completionDates.includes(missedDate);
+          const wasSkipped = skipDates.includes(missedDate);
+          const needsFreeze = wasScheduled && !wasCompleted && !wasSkipped &&
+            habitsNeedingFreeze.length > 0 && habitsNeedingFreeze[0].id === habit.id;
+
+          let newFreezeDates = freezeDates;
+
+          if (needsFreeze && !freezeUsedThisReset) {
+            // Apply freeze
+            newFreezeDates = [...freezeDates, missedDate];
+            freezeUsedThisReset = true;
+            freezeAppliedTo = { habitId: habit.id, habitName: habit.name, habitEmoji: habit.emoji };
+          } else if (wasScheduled && !wasCompleted && !wasSkipped && habit.currentStreak > 0) {
+            // Streak breaks — record for loss animation
+            if (!streakLost || habit.currentStreak > streakLost.lostStreak) {
+              streakLost = {
+                habitId: habit.id,
+                habitName: habit.name,
+                habitEmoji: habit.emoji,
+                lostStreak: habit.currentStreak,
+              };
+            }
+          }
+
+          const newStreak = calculateStreak(
+            habit.completionDates,
+            habit.completionDates.includes(today),
+            skipDates,
+            newFreezeDates
+          );
+          const newLongest = Math.max(
+            calculateLongestStreak(habit.completionDates, skipDates, newFreezeDates),
+            habit.longestStreak
+          );
+
+          return {
+            ...habit,
+            freezeDates: newFreezeDates,
+            isCompletedToday: habit.completionDates.includes(today),
+            currentStreak: newStreak,
+            longestStreak: newLongest,
+          };
+        });
+      });
+
+      if (freezeAppliedTo) {
+        setStreakFreezeWeek(week);
+        // Delay showing the event so state settles
+        setTimeout(() => setFreezeEvent(freezeAppliedTo), 500);
+      }
+      if (streakLost) {
+        setTimeout(() => setStreakLossEvent(streakLost), freezeAppliedTo ? 5000 : 500);
+      }
     }
     setLastActiveDate(today);
-  }, [lastActiveDate, setHabits, setLastActiveDate]);
+  }, [lastActiveDate, setHabits, setLastActiveDate, streakFreezeWeek, setStreakFreezeWeek]);
 
   // Midnight check interval
   useEffect(() => {
@@ -186,17 +312,10 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
       const today = getToday();
       if (lastActiveDate !== today) {
         setLastActiveDate(today);
-        setHabits((prev: Habit[]) =>
-          prev.map((habit) => ({
-            ...habit,
-            isCompletedToday: false,
-            currentStreak: calculateStreak(habit.completionDates, false, habit.skipDates || []),
-          }))
-        );
       }
     }, 60000);
     return () => clearInterval(checkMidnight);
-  }, [lastActiveDate, setLastActiveDate, setHabits]);
+  }, [lastActiveDate, setLastActiveDate]);
 
   // Request notification permission on first reminder set
   const requestNotificationPermission = useCallback(async () => {
@@ -252,6 +371,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         reminderTime,
         target,
         skipDates: [],
+        freezeDates: [],
       };
       setHabits((prev: Habit[]) => [...prev, newHabit]);
     },
@@ -285,8 +405,38 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
             newDates = habit.completionDates.filter((d) => d !== today);
           }
           const skipDates = habit.skipDates || [];
-          const newStreak = calculateStreak(newDates, newCompleted, skipDates);
-          const newLongest = Math.max(calculateLongestStreak(newDates, skipDates), habit.longestStreak);
+          const freezeDates = habit.freezeDates || [];
+          const newStreak = calculateStreak(newDates, newCompleted, skipDates, freezeDates);
+          const newLongest = Math.max(calculateLongestStreak(newDates, skipDates, freezeDates), habit.longestStreak);
+
+          // Check for streak badge milestones
+          if (newCompleted && newStreak > 0) {
+            for (const milestone of STREAK_MILESTONES) {
+              if (newStreak === milestone) {
+                const alreadyEarned = streakBadges.some(
+                  (b) => b.habitId === habit.id && b.milestone === milestone
+                );
+                if (!alreadyEarned) {
+                  const newBadge: StreakBadge = {
+                    id: uuidv4(),
+                    habitId: habit.id,
+                    habitName: habit.name,
+                    habitEmoji: habit.emoji,
+                    milestone,
+                    unlockedAt: today,
+                  };
+                  setStreakBadges((prev: StreakBadge[]) => [...prev, newBadge]);
+                  setTimeout(() => setBadgeEvent({
+                    milestone,
+                    habitName: habit.name,
+                    habitEmoji: habit.emoji,
+                  }), 400);
+                }
+                break;
+              }
+            }
+          }
+
           return {
             ...habit,
             isCompletedToday: newCompleted,
@@ -298,7 +448,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
       );
       setUndoAction({ type: 'toggle', habitId: id, timestamp: Date.now() });
     },
-    [setHabits]
+    [setHabits, streakBadges, setStreakBadges]
   );
 
   const editHabit = useCallback(
@@ -358,11 +508,12 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         prev.map((h) => {
           if (h.id !== habitId) return h;
           const skipDates = h.skipDates || [];
+          const freezeDates = h.freezeDates || [];
           const newSkipDates = skipDates.includes(date)
             ? skipDates.filter((d) => d !== date)
             : [...skipDates, date];
-          const newStreak = calculateStreak(h.completionDates, h.isCompletedToday, newSkipDates);
-          const newLongest = Math.max(calculateLongestStreak(h.completionDates, newSkipDates), h.longestStreak);
+          const newStreak = calculateStreak(h.completionDates, h.isCompletedToday, newSkipDates, freezeDates);
+          const newLongest = Math.max(calculateLongestStreak(h.completionDates, newSkipDates, freezeDates), h.longestStreak);
           return { ...h, skipDates: newSkipDates, currentStreak: newStreak, longestStreak: newLongest };
         })
       );
@@ -387,8 +538,9 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
             newDates = habit.completionDates.filter((d) => d !== today);
           }
           const skipDates = habit.skipDates || [];
-          const newStreak = calculateStreak(newDates, newCompleted, skipDates);
-          const newLongest = Math.max(calculateLongestStreak(newDates, skipDates), habit.longestStreak);
+          const freezeDates = habit.freezeDates || [];
+          const newStreak = calculateStreak(newDates, newCompleted, skipDates, freezeDates);
+          const newLongest = Math.max(calculateLongestStreak(newDates, skipDates, freezeDates), habit.longestStreak);
           return { ...habit, isCompletedToday: newCompleted, completionDates: newDates, currentStreak: newStreak, longestStreak: newLongest };
         })
       );
@@ -402,31 +554,37 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
     setUndoAction(null);
   }, []);
 
+  const dismissFreezeEvent = useCallback(() => setFreezeEvent(null), []);
+  const dismissStreakLossEvent = useCallback(() => setStreakLossEvent(null), []);
+  const dismissBadgeEvent = useCallback(() => setBadgeEvent(null), []);
+
   const exportData = useCallback(() => {
     return JSON.stringify({
       habits,
       profile,
       reflections,
       milestones,
+      streakBadges,
       exportDate: new Date().toISOString(),
       version: 2,
     }, null, 2);
-  }, [habits, profile, reflections, milestones]);
+  }, [habits, profile, reflections, milestones, streakBadges]);
 
   const importData = useCallback((json: string): boolean => {
     try {
       const data = JSON.parse(json);
       if (data.habits && Array.isArray(data.habits)) {
-        setHabits(data.habits.map((h: Habit) => ({ ...h, skipDates: h.skipDates || [] })));
+        setHabits(data.habits.map((h: Habit) => ({ ...h, skipDates: h.skipDates || [], freezeDates: h.freezeDates || [] })));
       }
       if (data.profile) setProfile(data.profile);
       if (data.reflections) setReflections(data.reflections);
       if (data.milestones) setMilestones(data.milestones);
+      if (data.streakBadges) setStreakBadges(data.streakBadges);
       return true;
     } catch {
       return false;
     }
-  }, [setHabits, setProfile, setReflections, setMilestones]);
+  }, [setHabits, setProfile, setReflections, setMilestones, setStreakBadges]);
 
   const today = new Date();
   const dayOfWeek = today.getDay();
@@ -446,6 +604,11 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         milestones,
         undoAction,
         hasCollectedDetails,
+        streakBadges,
+        freezeEvent,
+        streakLossEvent,
+        badgeEvent,
+        freezeAvailable,
         setHasCollectedDetails,
         addHabit,
         deleteHabit,
@@ -460,6 +623,9 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         toggleSkipDay,
         executeUndo,
         dismissUndo,
+        dismissFreezeEvent,
+        dismissStreakLossEvent,
+        dismissBadgeEvent,
         exportData,
         importData,
         completedToday,

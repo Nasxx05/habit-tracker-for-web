@@ -13,6 +13,9 @@ import UndoToast from './components/UndoToast';
 import TutorialGuide from './components/TutorialGuide';
 import DesktopBlocker from './components/DesktopBlocker';
 import InstallBanner from './components/InstallBanner';
+import StreakFreezeBanner from './components/StreakFreezeBanner';
+import StreakLossOverlay from './components/StreakLossOverlay';
+import StreakBadgeToast from './components/StreakBadgeToast';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -56,6 +59,38 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
+function StreakNotifications() {
+  const { freezeEvent, streakLossEvent, badgeEvent, dismissFreezeEvent, dismissStreakLossEvent, dismissBadgeEvent } = useHabits();
+
+  return (
+    <>
+      {freezeEvent && (
+        <StreakFreezeBanner
+          habitName={freezeEvent.habitName}
+          habitEmoji={freezeEvent.habitEmoji}
+          onDismiss={dismissFreezeEvent}
+        />
+      )}
+      {streakLossEvent && (
+        <StreakLossOverlay
+          streakCount={streakLossEvent.lostStreak}
+          habitName={streakLossEvent.habitName}
+          habitEmoji={streakLossEvent.habitEmoji}
+          onDismiss={dismissStreakLossEvent}
+        />
+      )}
+      {badgeEvent && (
+        <StreakBadgeToast
+          milestone={badgeEvent.milestone}
+          habitName={badgeEvent.habitName}
+          habitEmoji={badgeEvent.habitEmoji}
+          onDismiss={dismissBadgeEvent}
+        />
+      )}
+    </>
+  );
+}
+
 function AppContent() {
   const { currentView } = useHabits();
 
@@ -77,6 +112,7 @@ function AppContent() {
       </main>
       <BottomNav />
       <UndoToast />
+      <StreakNotifications />
       {currentView === 'home' && <TutorialGuide />}
     </div>
   );

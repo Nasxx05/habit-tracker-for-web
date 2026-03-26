@@ -12,6 +12,7 @@ export interface Habit {
   reminderTime: string | null; // "HH:MM" format
   target: string; // e.g., "10 minutes", "8 glasses"
   skipDates: string[]; // dates marked as rest/skip days (YYYY-MM-DD)
+  freezeDates: string[]; // dates where a streak freeze was applied (YYYY-MM-DD)
 }
 
 export interface HabitTemplate {
@@ -53,6 +54,15 @@ export interface UndoAction {
   habitId: string;
   habitData?: Habit; // full habit data for delete undo
   timestamp: number;
+}
+
+export interface StreakBadge {
+  id: string;
+  habitId: string;
+  habitName: string;
+  habitEmoji: string;
+  milestone: number;
+  unlockedAt: string;
 }
 
 export type View = 'welcome' | 'home' | 'calendar' | 'habit-detail' | 'profile' | 'stats' | 'weekly-review';
