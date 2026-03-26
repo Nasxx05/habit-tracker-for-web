@@ -17,6 +17,9 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const wasFirstCompletionRef = useRef(false);
 
+  const hasFreezeActive = habit.freezeDates && habit.freezeDates.length > 0 && habit.currentStreak > 0 && !habit.isCompletedToday;
+  const isInComeback = habit.currentStreak === 0 && habit.longestStreak > 2 && habit.completionDates.length > 0 && !habit.isCompletedToday;
+
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!habit.isCompletedToday) {
@@ -76,8 +79,27 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
       {/* Streak indicator */}
       {habit.currentStreak > 0 && (
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-xs">🔥</span>
-          <span className="text-xs font-semibold text-peach">{habit.currentStreak} day streak</span>
+          {hasFreezeActive ? (
+            <>
+              <span className="text-xs">🧊</span>
+              <span className="text-xs font-semibold text-blue-400">{habit.currentStreak} day streak (freeze active)</span>
+            </>
+          ) : (
+            <>
+              <span className="text-xs">🔥</span>
+              <span className="text-xs font-semibold text-peach">{habit.currentStreak} day streak</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Comeback mode indicator */}
+      {isInComeback && (
+        <div className="mt-2 flex items-center gap-1">
+          <span className="text-xs">🔄</span>
+          <span className="text-xs font-semibold text-peach">
+            Get back to {habit.longestStreak} days 💪
+          </span>
         </div>
       )}
 

@@ -3,11 +3,12 @@ import { useHabits } from '../context/HabitContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
 import HabitCard from './HabitCard';
 import AddHabitModal from './AddHabitModal';
+import AchievementsSection from './AchievementsSection';
 
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function Dashboard() {
-  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits } = useHabits();
+  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, freezeAvailable } = useHabits();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
@@ -80,7 +81,12 @@ export default function Dashboard() {
     ? 'Today'
     : selDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-  // Drag-to-reorder handlers — map filtered indices to full habits array indices
+  // Comeback mode: habits where streak broke and longestStreak > 2
+  const comebackHabits = habits.filter(
+    (h) => h.currentStreak === 0 && h.longestStreak > 2 && h.completionDates.length > 0 && !h.isCompletedToday
+  );
+
+  // Drag-to-reorder handlers
   const getHabitIndex = useCallback((filteredIndex: number) => {
     const habit = filteredHabits[filteredIndex];
     return habits.findIndex((h) => h.id === habit?.id);
@@ -136,6 +142,21 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Streak Freeze Status */}
+      {isViewingToday && habits.length > 0 && (
+        <section className="px-4 pt-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <span>🧊</span>
+            <span>
+              Streak freeze: {freezeAvailable
+                ? <span className="text-forest font-semibold">Available</span>
+                : <span className="text-peach font-semibold">Used this week</span>
+              }
+            </span>
+          </div>
+        </section>
+      )}
+
       {/* Scrollable Date Selector */}
       <section className="px-4 pt-3 pb-1">
         <div
@@ -171,6 +192,26 @@ export default function Dashboard() {
           ))}
         </div>
       </section>
+
+      {/* Comeback Mode Banner */}
+      {isViewingToday && comebackHabits.length > 0 && (
+        <section className="px-4 pt-2">
+          <div className="bg-gradient-to-r from-peach-light/50 to-peach/20 rounded-2xl p-4 border border-peach/20">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">🔄</div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-peach tracking-wider mb-1">COMEBACK MODE</p>
+                {comebackHabits.slice(0, 2).map((h) => (
+                  <p key={h.id} className="text-sm text-dark">
+                    {h.emoji} You were at <span className="font-bold">{h.longestStreak} days</span>.
+                    Get back there in {h.longestStreak} days 💪
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Daily Journey Card */}
       <section className="px-4 pt-4">
@@ -260,6 +301,9 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Achievements Section */}
+      {isViewingToday && <AchievementsSection badges={streakBadges} />}
+
       {/* Category Filter */}
       {categories.length > 2 && isViewingToday && (
         <section className="px-4 pt-4">
@@ -333,6 +377,7 @@ export default function Dashboard() {
             {habitsScheduledOnDate.map((habit) => {
               const wasCompleted = habit.completionDates.includes(selectedDate);
               const wasSkipped = (habit.skipDates || []).includes(selectedDate);
+              const wasFrozen = (habit.freezeDates || []).includes(selectedDate);
               return (
                 <div key={habit.id} className="bg-white rounded-2xl p-4 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -342,15 +387,27 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-dark truncate">{habit.name}</h3>
                       <p className="text-xs text-muted mt-0.5">
-                        {wasSkipped ? 'Rest Day' : wasCompleted ? `${habit.target || habit.category} · Done` : `${habit.target || habit.category} · Missed`}
+                        {wasFrozen
+                          ? '🧊 Streak Freeze Used'
+                          : wasSkipped
+                          ? 'Rest Day'
+                          : wasCompleted
+                          ? `${habit.target || habit.category} · Done`
+                          : `${habit.target || habit.category} · Missed`}
                       </p>
                     </div>
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                        wasSkipped ? 'bg-peach-light text-peach' : wasCompleted ? 'bg-sage text-white' : 'border-2 border-gray-200 text-gray-300'
+                        wasFrozen
+                          ? 'bg-blue-50 text-blue-400'
+                          : wasSkipped
+                          ? 'bg-peach-light text-peach'
+                          : wasCompleted
+                          ? 'bg-sage text-white'
+                          : 'border-2 border-gray-200 text-gray-300'
                       }`}
                     >
-                      {wasSkipped ? '💤' : wasCompleted ? '✓' : '–'}
+                      {wasFrozen ? '🧊' : wasSkipped ? '💤' : wasCompleted ? '✓' : '–'}
                     </div>
                   </div>
                 </div>
