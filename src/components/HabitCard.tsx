@@ -11,7 +11,7 @@ interface HabitCardProps {
 }
 
 export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
-  const { toggleHabit, selectHabit, hasCollectedDetails } = useHabits();
+  const { toggleHabit, toggleReminder, selectHabit, hasCollectedDetails } = useHabits();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -61,6 +61,18 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
           <h3 className="text-sm font-bold text-dark truncate">{habit.name}</h3>
           <p className="text-xs text-muted mt-0.5">{subtitle}</p>
         </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleReminder(habit.id);
+          }}
+          className="w-8 h-8 flex items-center justify-center shrink-0 cursor-pointer rounded-full hover:bg-mint transition-colors"
+          aria-label={habit.reminderTime ? 'Disable reminder' : 'Enable reminder'}
+          title={habit.reminderTime ? `Reminder at ${habit.reminderTime}` : 'No reminder set'}
+        >
+          <span className="text-sm">{habit.reminderTime ? '🔔' : '🔕'}</span>
+        </button>
 
         <button
           onClick={handleToggle}

@@ -59,10 +59,12 @@ interface HabitContextType {
   streakLossEvent: StreakLossEvent | null;
   badgeEvent: BadgeEvent | null;
   freezeAvailable: boolean;
+  notificationPermission: NotificationPermission | 'unsupported';
   setHasCollectedDetails: (value: boolean) => void;
   addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null) => void;
   deleteHabit: (id: string) => void;
   toggleHabit: (id: string) => void;
+  toggleReminder: (id: string) => void;
   editHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'emoji' | 'category' | 'target' | 'schedule' | 'reminderTime'>>) => void;
   reorderHabits: (startIndex: number, endIndex: number) => void;
   setCurrentView: (view: View) => void;
@@ -76,6 +78,7 @@ interface HabitContextType {
   dismissFreezeEvent: () => void;
   dismissStreakLossEvent: () => void;
   dismissBadgeEvent: () => void;
+  requestNotificationPermission: () => Promise<void>;
   exportData: () => string;
   importData: (json: string) => boolean;
   completedToday: number;
@@ -317,42 +320,72 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
     return () => clearInterval(checkMidnight);
   }, [lastActiveDate, setLastActiveDate]);
 
-  // Request notification permission on first reminder set
+  // Notification permission state
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(
+    'Notification' in window ? Notification.permission : 'unsupported'
+  );
+
   const requestNotificationPermission = useCallback(async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      await Notification.requestPermission();
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      const result = await Notification.requestPermission();
+      setNotificationPermission(result);
     }
   }, []);
 
-  // Schedule notifications
+  // Track which habits have already been notified today to prevent duplicates
+  const [lastNotified, setLastNotified] = useLocalStorage<Record<string, string>>('lastNotified', {});
+
+  // Interval-based notification engine (checks every 60s)
   useEffect(() => {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    const checkNotifications = () => {
+      const now = new Date();
+      const todayStr = getToday();
+      const currentHH = String(now.getHours()).padStart(2, '0');
+      const currentMM = String(now.getMinutes()).padStart(2, '0');
+      const currentTime = `${currentHH}:${currentMM}`;
+      const dayOfWeek = now.getDay();
 
-    habits.forEach((habit) => {
-      if (!habit.reminderTime || !habit.schedule.includes(dayOfWeek) || habit.isCompletedToday) return;
+      // Per-habit reminders
+      habits.forEach((habit) => {
+        if (!habit.reminderTime) return;
+        if (!habit.schedule.includes(dayOfWeek)) return;
+        if (habit.isCompletedToday) return;
+        if (lastNotified[habit.id] === todayStr) return;
 
-      const [hours, minutes] = habit.reminderTime.split(':').map(Number);
-      const reminderDate = new Date();
-      reminderDate.setHours(hours, minutes, 0, 0);
-
-      const delay = reminderDate.getTime() - Date.now();
-      if (delay > 0 && delay < 24 * 60 * 60 * 1000) {
-        const timer = setTimeout(() => {
-          new Notification(`${habit.emoji} ${habit.name}`, {
-            body: `Time to complete your habit! ${habit.target || ''}`.trim(),
+        if (habit.reminderTime === currentTime) {
+          new Notification(`⏰ Time to ${habit.name}!`, {
+            body: `${habit.emoji} Keep your streak going.${habit.currentStreak > 0 ? ` ${habit.currentStreak} day streak!` : ''}`,
             icon: '/favicon.ico',
+            tag: `habit-${habit.id}`,
           });
-        }, delay);
-        timers.push(timer);
-      }
-    });
+          setLastNotified((prev: Record<string, string>) => ({ ...prev, [habit.id]: todayStr }));
+        }
+      });
 
-    return () => timers.forEach(clearTimeout);
-  }, [habits]);
+      // 9 PM end-of-day nudge
+      if (currentTime === '21:00') {
+        const unchecked = habits.filter(
+          (h) => h.schedule.includes(dayOfWeek) && !h.isCompletedToday && h.reminderTime
+        );
+        if (unchecked.length > 0 && lastNotified['__eod_nudge'] !== todayStr) {
+          new Notification(`You still have ${unchecked.length} habit${unchecked.length > 1 ? 's' : ''} unchecked today`, {
+            body: `Don't break your streak! ${unchecked.map((h) => h.emoji).join(' ')}`,
+            icon: '/favicon.ico',
+            tag: 'eod-nudge',
+          });
+          setLastNotified((prev: Record<string, string>) => ({ ...prev, '__eod_nudge': todayStr }));
+        }
+      }
+    };
+
+    // Run immediately, then every 60 seconds
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [habits, lastNotified, setLastNotified]);
 
   const addHabit = useCallback(
     (name: string, emoji: string, category = 'General', target = '', schedule: number[] = [0, 1, 2, 3, 4, 5, 6], reminderTime: string | null = null) => {
@@ -459,6 +492,25 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
       );
     },
     [setHabits, requestNotificationPermission]
+  );
+
+  const toggleReminder = useCallback(
+    (id: string) => {
+      setHabits((prev: Habit[]) =>
+        prev.map((h) => {
+          if (h.id !== id) return h;
+          // If reminder exists, remove it. Otherwise set to "08:00" as default.
+          const newReminderTime = h.reminderTime ? null : '08:00';
+          return { ...h, reminderTime: newReminderTime };
+        })
+      );
+      // Request permission when enabling
+      const habit = habits.find((h) => h.id === id);
+      if (habit && !habit.reminderTime) {
+        requestNotificationPermission();
+      }
+    },
+    [setHabits, habits, requestNotificationPermission]
   );
 
   const reorderHabits = useCallback(
@@ -609,10 +661,12 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         streakLossEvent,
         badgeEvent,
         freezeAvailable,
+        notificationPermission,
         setHasCollectedDetails,
         addHabit,
         deleteHabit,
         toggleHabit,
+        toggleReminder,
         editHabit,
         reorderHabits,
         setCurrentView,
@@ -626,6 +680,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         dismissFreezeEvent,
         dismissStreakLossEvent,
         dismissBadgeEvent,
+        requestNotificationPermission,
         exportData,
         importData,
         completedToday,

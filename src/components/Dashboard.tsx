@@ -8,7 +8,7 @@ import AchievementsSection from './AchievementsSection';
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function Dashboard() {
-  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, freezeAvailable } = useHabits();
+  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, freezeAvailable, notificationPermission, requestNotificationPermission } = useHabits();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
@@ -153,6 +153,38 @@ export default function Dashboard() {
                 : <span className="text-peach font-semibold">Used this week</span>
               }
             </span>
+          </div>
+        </section>
+      )}
+
+      {/* Notification Permission Banner */}
+      {isViewingToday && habits.some((h) => h.reminderTime) && notificationPermission === 'denied' && (
+        <section className="px-4 pt-2">
+          <div className="bg-peach-light/40 rounded-xl p-3 flex items-start gap-2">
+            <span className="text-sm mt-0.5">🔕</span>
+            <div>
+              <p className="text-xs font-semibold text-dark">Notifications are blocked</p>
+              <p className="text-xs text-muted mt-0.5">
+                You have reminders set but notifications are disabled. Go to your browser settings to allow notifications for this site.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {isViewingToday && habits.some((h) => h.reminderTime) && notificationPermission === 'default' && (
+        <section className="px-4 pt-2">
+          <div className="bg-mint rounded-xl p-3 flex items-center justify-between">
+            <div className="flex items-start gap-2">
+              <span className="text-sm mt-0.5">🔔</span>
+              <p className="text-xs text-dark">Enable notifications for habit reminders</p>
+            </div>
+            <button
+              onClick={requestNotificationPermission}
+              className="text-xs font-semibold text-forest bg-white px-3 py-1.5 rounded-full cursor-pointer hover:bg-sage-light transition shrink-0"
+            >
+              Allow
+            </button>
           </div>
         </section>
       )}
