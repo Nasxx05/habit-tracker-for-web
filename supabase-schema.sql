@@ -28,3 +28,7 @@ create policy "Users can insert own data"
 create policy "Users can update own data"
   on public.user_data for update
   using (auth.uid() = user_id);
+
+-- 4. Premium tier flag — adds is_premium column for free vs paid tiers
+alter table public.user_data
+  add column if not exists is_premium boolean not null default false;

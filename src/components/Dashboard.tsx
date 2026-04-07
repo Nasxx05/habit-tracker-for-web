@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
 import HabitCard from './HabitCard';
 import AddHabitModal from './AddHabitModal';
@@ -9,6 +10,7 @@ const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function Dashboard() {
   const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, freezeAvailable, notificationPermission, requestNotificationPermission } = useHabits();
+  const { isPremium } = usePremium();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
@@ -448,6 +450,15 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {/* Free Plan Indicator */}
+      {!isPremium && (
+        <section className="px-4 pt-4">
+          <div className="text-center text-xs text-muted">
+            Free Plan – {Math.min(habits.length, FREE_HABIT_LIMIT)}/{FREE_HABIT_LIMIT} habits used
+          </div>
+        </section>
+      )}
 
       <AddHabitModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
     </div>
