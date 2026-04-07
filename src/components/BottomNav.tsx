@@ -35,6 +35,14 @@ function ProfileIcon({ active }: { active: boolean }) {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--color-muted)" className="w-6 h-6">
+      <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 const leftItems: { view: View; icon: (active: boolean) => React.ReactNode }[] = [
   { view: 'home', icon: (active) => <HomeIcon active={active} /> },
   { view: 'calendar', icon: (active) => <CalendarIcon active={active} /> },
@@ -63,23 +71,20 @@ export default function BottomNav() {
 
   return (
     <div data-tutorial="bottom-nav" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-[max(env(safe-area-inset-bottom),1.25rem)]">
-      <div className="max-w-3xl mx-auto flex items-center relative pt-2">
+      <div className="max-w-3xl mx-auto flex items-center pt-2">
         {leftItems.map(renderTab)}
-        <div className="flex-1" />
+        <button
+          data-tutorial="fab"
+          onClick={() => {
+            setCurrentView('home');
+            window.dispatchEvent(new CustomEvent('open-add-habit'));
+          }}
+          className="flex-1 flex items-center justify-center py-3 cursor-pointer"
+          aria-label="Add habit"
+        >
+          <PlusIcon />
+        </button>
         {rightItems.map(renderTab)}
-
-        <div className="absolute inset-x-0 -top-7 flex justify-center pointer-events-none">
-          <button
-            data-tutorial="fab"
-            onClick={() => {
-              setCurrentView('home');
-              window.dispatchEvent(new CustomEvent('open-add-habit'));
-            }}
-            className="pointer-events-auto w-14 h-14 bg-forest text-white rounded-full flex items-center justify-center text-2xl shadow-lg shadow-forest/30 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-          >
-            +
-          </button>
-        </div>
       </div>
     </div>
   );
