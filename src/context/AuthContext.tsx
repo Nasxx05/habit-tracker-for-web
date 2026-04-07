@@ -42,8 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUpWithEmail = useCallback(async (email: string, password: string): Promise<string | null> => {
     if (!supabase) return 'Supabase not configured';
-    const { error } = await supabase.auth.signUp({ email, password });
-    return error?.message ?? null;
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return error.message;
+    // If email confirmation is enabled in Supabase, signUp returns no session.
+    // Force-sign-in immediately so the user is logged in without confirming an email.
+    if (!data.session) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) return signInError.message;
+    }
+    return null;
   }, []);
 
   const signOut = useCallback(async () => {

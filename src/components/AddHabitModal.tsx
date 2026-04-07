@@ -13,6 +13,7 @@ const EMOJI_OPTIONS = [
 
 const CATEGORIES = ['General', 'Health', 'Fitness', 'Mindfulness', 'Learning', 'Productivity', 'Self-care', 'Social'];
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const COLOR_PALETTE = ['#2D4A3E', '#A8C5B8', '#E8985E', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#10B981', '#06B6D4'];
 
 const TEMPLATES: HabitTemplate[] = [
   { name: 'Drink Water', emoji: '💧', category: 'Health', target: '8 glasses', schedule: [0, 1, 2, 3, 4, 5, 6] },
@@ -42,6 +43,8 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   const [selectedEmoji, setSelectedEmoji] = useState('💪');
   const [category, setCategory] = useState('General');
   const [target, setTarget] = useState('');
+  const [targetCount, setTargetCount] = useState<string>('');
+  const [color, setColor] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [reminderTime, setReminderTime] = useState('');
   const [showTemplates, setShowTemplates] = useState(true);
@@ -83,11 +86,23 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
       onClose();
       return;
     }
-    addHabit(name.trim(), selectedEmoji, category, target, schedule, reminderTime || null);
+    const tc = parseInt(targetCount, 10);
+    addHabit(
+      name.trim(),
+      selectedEmoji,
+      category,
+      target,
+      schedule,
+      reminderTime || null,
+      Number.isFinite(tc) && tc > 0 ? tc : null,
+      isPremium ? color : null
+    );
     setName('');
     setSelectedEmoji('💪');
     setCategory('General');
     setTarget('');
+    setTargetCount('');
+    setColor(null);
     setSchedule([0, 1, 2, 3, 4, 5, 6]);
     setReminderTime('');
     setShowTemplates(true);
@@ -180,15 +195,57 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Target (optional)</label>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Target label (optional)</label>
             <input
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              placeholder="e.g., 10 minutes, 8 glasses"
+              placeholder="e.g., minutes, glasses, pages"
               className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
               maxLength={40}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Target count (optional)</label>
+            <input
+              type="number"
+              min="0"
+              value={targetCount}
+              onChange={(e) => setTargetCount(e.target.value)}
+              placeholder="e.g., 8 (for 8 glasses) — leave empty for simple checkbox"
+              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
+            />
+            <p className="text-xs text-muted mt-1">Set a number to enable tap-to-increment (e.g. tap +1 each glass).</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">
+              Color {!isPremium && <span className="text-xs text-muted font-normal">· Premium</span>}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => isPremium && setColor(null)}
+                disabled={!isPremium}
+                className={`w-8 h-8 rounded-full border-2 ${color === null ? 'ring-2 ring-forest' : 'border-sage-light'} ${!isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} bg-mint flex items-center justify-center text-xs`}
+              >
+                ✕
+              </button>
+              {COLOR_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => isPremium && setColor(c)}
+                  disabled={!isPremium}
+                  className={`w-8 h-8 rounded-full ${color === c ? 'ring-2 ring-offset-2 ring-forest' : ''} ${!isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+            {!isPremium && (
+              <p className="text-xs text-muted mt-1">🔒 Upgrade to Premium to color-code your habits.</p>
+            )}
           </div>
 
           {/* Schedule */}

@@ -11,9 +11,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState('');
   const [closing, setClosing] = useState(false);
 
   if (!isOpen) return null;
@@ -26,7 +26,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     setLoading(true);
 
     let err: string | null;
@@ -39,8 +38,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoading(false);
     if (err) {
       setError(err);
-    } else if (mode === 'signup') {
-      setSuccess('Check your email to confirm your account.');
     } else {
       handleClose();
     }
@@ -81,21 +78,28 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             required
             className="w-full px-4 py-3 bg-cream rounded-xl text-dark text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sage placeholder:text-muted/50 mb-3"
           />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            minLength={6}
-            className="w-full px-4 py-3 bg-cream rounded-xl text-dark text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sage placeholder:text-muted/50 mb-4"
-          />
+          <div className="relative mb-4">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              minLength={6}
+              className="w-full px-4 py-3 pr-16 bg-cream rounded-xl text-dark text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sage placeholder:text-muted/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-muted hover:text-dark cursor-pointer"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
 
           {error && (
             <p className="text-sm text-red-500 text-center mb-3">{error}</p>
-          )}
-          {success && (
-            <p className="text-sm text-forest text-center mb-3">{success}</p>
           )}
 
           <button
@@ -108,7 +112,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         </form>
 
         <button
-          onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setSuccess(''); }}
+          onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
           className="w-full mt-3 py-2.5 text-muted text-sm font-medium hover:text-dark transition cursor-pointer"
         >
           {mode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}

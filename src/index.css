@@ -12,6 +12,19 @@
   --color-peach-light: #f5c9a3;
 }
 
+/* Dark mode — overrides theme CSS variables so all utilities recolor automatically */
+html.dark {
+  --color-cream: #0f1419;
+  --color-mint: #1f2a26;
+  --color-sage-light: #2d3a35;
+  --color-sage: #5b8074;
+  --color-forest: #A8C5B8;
+  --color-dark: #e8e8e8;
+  --color-muted: #9aa0a6;
+  --color-white: #1a1f24;
+}
+html.dark body { background-color: #0f1419; color: #e8e8e8; }
+
 @layer base {
   *,
   *::before,

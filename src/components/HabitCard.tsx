@@ -11,7 +11,7 @@ interface HabitCardProps {
 }
 
 export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
-  const { toggleHabit, selectHabit, hasCollectedDetails } = useHabits();
+  const { toggleHabit, incrementHabit, selectHabit, hasCollectedDetails } = useHabits();
   const [isAnimating, setIsAnimating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -41,19 +41,42 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
     selectHabit(habit.id);
   };
 
-  const subtitle = habit.isCompletedToday
-    ? `${habit.target || habit.category} · Done`
-    : `${habit.target || habit.category} · Not started`;
+  const today = new Date().toISOString().slice(0, 10);
+  const isQuantitative = !!(habit.targetCount && habit.targetCount > 0);
+  const todayCount = habit.progressByDate?.[today] || 0;
+  const progressPct = isQuantitative ? Math.min(100, Math.round((todayCount / (habit.targetCount as number)) * 100)) : 0;
+
+  const subtitle = isQuantitative
+    ? `${todayCount}/${habit.targetCount} ${habit.target || habit.category}`
+    : habit.isCompletedToday
+      ? `${habit.target || habit.category} · Done`
+      : `${habit.target || habit.category} · Not started`;
+
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const willComplete = todayCount + 1 >= (habit.targetCount as number);
+    if (willComplete && !habit.isCompletedToday) {
+      wasFirstCompletionRef.current = habit.completionDates.length === 0;
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 400);
+      setTimeout(() => setShowCelebration(true), 350);
+    }
+    incrementHabit(habit.id, 1);
+  };
 
   return (
     <div
       onClick={handleCardClick}
+      style={habit.color ? { borderLeft: `4px solid ${habit.color}` } : undefined}
       className={`relative bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 ${
         isAnimating ? 'scale-[1.02]' : ''
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-mint rounded-xl flex items-center justify-center text-2xl shrink-0">
+        <div
+          className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${habit.color ? '' : 'bg-mint'}`}
+          style={habit.color ? { backgroundColor: `${habit.color}33` } : undefined}
+        >
           {habit.emoji}
         </div>
 
@@ -63,18 +86,28 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
         </div>
 
         <button
-          onClick={handleToggle}
+          onClick={isQuantitative ? handleIncrement : handleToggle}
           data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
           className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
             habit.isCompletedToday
               ? 'bg-sage text-white shadow-sm'
               : 'border-2 border-sage-light text-sage hover:border-sage hover:bg-mint'
           } ${isAnimating ? 'animate-bounce-once' : ''}`}
-          aria-label={habit.isCompletedToday ? 'Mark as incomplete' : 'Mark as complete'}
+          aria-label={isQuantitative ? 'Add one' : habit.isCompletedToday ? 'Mark as incomplete' : 'Mark as complete'}
         >
-          {habit.isCompletedToday ? '✓' : '+'}
+          {habit.isCompletedToday ? '✓' : isQuantitative ? '+1' : '+'}
         </button>
       </div>
+
+      {/* Progress bar for quantitative habits */}
+      {isQuantitative && (
+        <div className="mt-3 w-full h-1.5 bg-cream rounded-full overflow-hidden">
+          <div
+            className="h-full transition-all duration-300"
+            style={{ width: `${progressPct}%`, backgroundColor: habit.color || 'var(--color-sage)' }}
+          />
+        </div>
+      )}
 
       {/* Streak indicator */}
       {habit.currentStreak > 0 && (
