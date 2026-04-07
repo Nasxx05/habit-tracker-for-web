@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     notificationPermission,
     requestNotificationPermission,
   } = useHabits();
+  const { theme, toggleTheme } = useTheme();
   const [section, setSection] = useState<Section>('menu');
   const [nameInput, setNameInput] = useState(profile.name);
   const [taglineInput, setTaglineInput] = useState(profile.tagline);
@@ -105,21 +107,35 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {section === 'menu' && (
-          <div className="bg-cream rounded-2xl overflow-hidden">
-            {menuItems.map((item, i) => (
+          <>
+            <div className="bg-cream rounded-2xl overflow-hidden">
+              {menuItems.map((item, i) => (
+                <button
+                  key={item.section}
+                  onClick={() => setSection(item.section)}
+                  className={`w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer ${
+                    i < menuItems.length - 1 ? 'border-b border-gray-100' : ''
+                  }`}
+                >
+                  <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">{item.icon}</span>
+                  <span className="text-sm font-medium text-dark flex-1 text-left">{item.label}</span>
+                  <span className="text-muted text-sm">›</span>
+                </button>
+              ))}
+            </div>
+            <div className="bg-cream rounded-2xl overflow-hidden mt-3">
               <button
-                key={item.section}
-                onClick={() => setSection(item.section)}
-                className={`w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer ${
-                  i < menuItems.length - 1 ? 'border-b border-gray-100' : ''
-                }`}
+                onClick={toggleTheme}
+                className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer"
               >
-                <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">{item.icon}</span>
-                <span className="text-sm font-medium text-dark flex-1 text-left">{item.label}</span>
-                <span className="text-muted text-sm">›</span>
+                <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">{theme === 'dark' ? '🌙' : '☀️'}</span>
+                <span className="text-sm font-medium text-dark flex-1 text-left">Dark Mode</span>
+                <span className={`relative inline-flex w-10 h-6 rounded-full transition ${theme === 'dark' ? 'bg-forest' : 'bg-gray-300'}`}>
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-4' : ''}`} />
+                </span>
               </button>
-            ))}
-          </div>
+            </div>
+          </>
         )}
 
         {section === 'backup' && (

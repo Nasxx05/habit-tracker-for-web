@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { usePremium } from '../context/PremiumContext';
+import { COLOR_PALETTE } from './AddHabitModal';
 import type { Habit } from '../types/habit';
 
 const EMOJI_OPTIONS = [
@@ -20,10 +22,13 @@ interface EditHabitModalProps {
 
 export default function EditHabitModal({ habit, isOpen, onClose }: EditHabitModalProps) {
   const { editHabit, deleteHabit } = useHabits();
+  const { isPremium } = usePremium();
   const [name, setName] = useState(habit.name);
   const [emoji, setEmoji] = useState(habit.emoji);
   const [category, setCategory] = useState(habit.category || 'General');
   const [target, setTarget] = useState(habit.target || '');
+  const [targetCount, setTargetCount] = useState<string>(habit.targetCount ? String(habit.targetCount) : '');
+  const [color, setColor] = useState<string | null>(habit.color || null);
   const [schedule, setSchedule] = useState<number[]>(habit.schedule || [0, 1, 2, 3, 4, 5, 6]);
   const [reminderTime, setReminderTime] = useState(habit.reminderTime || '');
   const [showDelete, setShowDelete] = useState(false);
@@ -34,6 +39,8 @@ export default function EditHabitModal({ habit, isOpen, onClose }: EditHabitModa
       setEmoji(habit.emoji);
       setCategory(habit.category || 'General');
       setTarget(habit.target || '');
+      setTargetCount(habit.targetCount ? String(habit.targetCount) : '');
+      setColor(habit.color || null);
       setSchedule(habit.schedule || [0, 1, 2, 3, 4, 5, 6]);
       setReminderTime(habit.reminderTime || '');
       setShowDelete(false);
@@ -48,7 +55,17 @@ export default function EditHabitModal({ habit, isOpen, onClose }: EditHabitModa
 
   const handleSave = () => {
     if (!name.trim()) return;
-    editHabit(habit.id, { name: name.trim(), emoji, category, target, schedule, reminderTime: reminderTime || null });
+    const tc = parseInt(targetCount, 10);
+    editHabit(habit.id, {
+      name: name.trim(),
+      emoji,
+      category,
+      target,
+      targetCount: Number.isFinite(tc) && tc > 0 ? tc : null,
+      color: isPremium ? color : null,
+      schedule,
+      reminderTime: reminderTime || null,
+    });
     onClose();
   };
 
@@ -102,10 +119,36 @@ export default function EditHabitModal({ habit, isOpen, onClose }: EditHabitModa
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Target (optional)</label>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Target label (optional)</label>
             <input type="text" value={target} onChange={(e) => setTarget(e.target.value)}
-              placeholder="e.g., 10 minutes, 8 glasses"
+              placeholder="e.g., minutes, glasses, pages"
               className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark" maxLength={40} />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">Target count (optional)</label>
+            <input type="number" min="0" value={targetCount} onChange={(e) => setTargetCount(e.target.value)}
+              placeholder="e.g., 8 — leave empty for simple checkbox"
+              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark" />
+            <p className="text-xs text-muted mt-1">Set a number to enable tap-to-increment.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark mb-1.5">
+              Color {!isPremium && <span className="text-xs text-muted font-normal">· Premium</span>}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => isPremium && setColor(null)} disabled={!isPremium}
+                className={`w-8 h-8 rounded-full border-2 ${color === null ? 'ring-2 ring-forest' : 'border-sage-light'} ${!isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} bg-mint flex items-center justify-center text-xs`}
+              >✕</button>
+              {COLOR_PALETTE.map((c) => (
+                <button key={c} type="button" onClick={() => isPremium && setColor(c)} disabled={!isPremium}
+                  className={`w-8 h-8 rounded-full ${color === c ? 'ring-2 ring-offset-2 ring-forest' : ''} ${!isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+            {!isPremium && <p className="text-xs text-muted mt-1">🔒 Upgrade to Premium to color-code your habits.</p>}
           </div>
 
           <div>

@@ -11,6 +11,9 @@ export interface Habit {
   schedule: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
   reminderTime: string | null; // "HH:MM" format
   target: string; // e.g., "10 minutes", "8 glasses"
+  targetCount: number | null; // numeric target for tap-to-increment habits (null = simple checkbox)
+  progressByDate: Record<string, number>; // date -> current count for quantitative habits
+  color: string | null; // hex color (premium feature)
   skipDates: string[]; // dates marked as rest/skip days (YYYY-MM-DD)
   freezeDates: string[]; // dates where a streak freeze was applied (YYYY-MM-DD)
 }

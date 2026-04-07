@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { usePremium } from '../context/PremiumContext';
 import {
   getDaysInMonth,
   getFirstDayOfMonth,
@@ -8,6 +9,9 @@ import {
   getToday,
 } from '../utils/dateHelpers';
 import EditHabitModal from './EditHabitModal';
+import HabitAnalytics from './HabitAnalytics';
+import ShareCardModal from './ShareCardModal';
+import UpgradeModal from './UpgradeModal';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -62,6 +66,7 @@ function getInsights(habit: { name: string; currentStreak: number; longestStreak
 
 export default function HabitDetail() {
   const { habits, selectedHabitId, setCurrentView, reflections, addReflection, toggleHabit, toggleSkipDay } = useHabits();
+  const { isPremium } = usePremium();
   const habit = habits.find((h) => h.id === selectedHabitId);
 
   const today = new Date();
@@ -69,6 +74,8 @@ export default function HabitDetail() {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [showMenu, setShowMenu] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [showShareUpgrade, setShowShareUpgrade] = useState(false);
   const [reflectionText, setReflectionText] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,6 +146,10 @@ export default function HabitDetail() {
               <button onClick={() => { toggleSkipDay(habit.id, todayStr); setShowMenu(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
                 {isSkippedToday ? '🔄 Remove Skip' : '💤 Skip Today (Rest Day)'}
+              </button>
+              <button onClick={() => { setShowMenu(false); if (isPremium) setShowShare(true); else setShowShareUpgrade(true); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
+                📤 Share Progress {!isPremium && <span className="text-xs text-muted">· Premium</span>}
               </button>
             </div>
           )}
@@ -286,7 +297,11 @@ export default function HabitDetail() {
         </section>
       )}
 
+      <HabitAnalytics habit={habit} onUpgrade={() => setShowShareUpgrade(true)} />
+
       <EditHabitModal habit={habit} isOpen={showEdit} onClose={() => setShowEdit(false)} />
+      <ShareCardModal habit={habit} isOpen={showShare} onClose={() => setShowShare(false)} />
+      <UpgradeModal isOpen={showShareUpgrade} onClose={() => setShowShareUpgrade(false)} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { HabitProvider, useHabits } from './context/HabitContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PremiumProvider } from './context/PremiumContext';
+import { ThemeProvider } from './context/ThemeContext';
 import WelcomeScreen from './components/WelcomeScreen';
 import Dashboard from './components/Dashboard';
 import Calendar from './components/Calendar';
@@ -134,9 +135,11 @@ function AppWithAuth() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AppWithAuth />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppWithAuth />
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

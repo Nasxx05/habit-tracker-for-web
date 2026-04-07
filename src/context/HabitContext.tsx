@@ -53,11 +53,12 @@ interface HabitContextType {
   badgeEvent: BadgeEvent | null;
   notificationPermission: NotificationPermission | 'unsupported';
   setHasCollectedDetails: (value: boolean) => void;
-  addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null) => void;
+  addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null, targetCount?: number | null, color?: string | null) => void;
   deleteHabit: (id: string) => void;
   toggleHabit: (id: string) => void;
+  incrementHabit: (id: string, delta?: number) => void;
   toggleReminder: (id: string) => void;
-  editHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'emoji' | 'category' | 'target' | 'schedule' | 'reminderTime'>>) => void;
+  editHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'emoji' | 'category' | 'target' | 'schedule' | 'reminderTime' | 'targetCount' | 'color'>>) => void;
   reorderHabits: (startIndex: number, endIndex: number) => void;
   setCurrentView: (view: View) => void;
   setHasVisitedBefore: (value: boolean) => void;
@@ -89,6 +90,9 @@ function migrateHabits(rawHabits: Habit[]): Habit[] {
     skipDates: Array.isArray(h.skipDates) ? h.skipDates : [],
     freezeDates: Array.isArray(h.freezeDates) ? h.freezeDates : [],
     target: h.target || '',
+    targetCount: typeof h.targetCount === 'number' ? h.targetCount : null,
+    progressByDate: h.progressByDate && typeof h.progressByDate === 'object' ? h.progressByDate : {},
+    color: typeof h.color === 'string' ? h.color : null,
     reminderTime: h.reminderTime ?? null,
     completionDates: Array.isArray(h.completionDates) ? h.completionDates : [],
     createdAt: h.createdAt || new Date().toISOString(),
@@ -390,7 +394,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
   }, [habits, lastNotified, setLastNotified]);
 
   const addHabit = useCallback(
-    (name: string, emoji: string, category = 'General', target = '', schedule: number[] = [0, 1, 2, 3, 4, 5, 6], reminderTime: string | null = null) => {
+    (name: string, emoji: string, category = 'General', target = '', schedule: number[] = [0, 1, 2, 3, 4, 5, 6], reminderTime: string | null = null, targetCount: number | null = null, color: string | null = null) => {
       if (reminderTime) requestNotificationPermission();
       const newHabit: Habit = {
         id: uuidv4(),
@@ -405,12 +409,52 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         schedule,
         reminderTime,
         target,
+        targetCount,
+        progressByDate: {},
+        color,
         skipDates: [],
         freezeDates: [],
       };
       setHabits((prev: Habit[]) => [...prev, newHabit]);
     },
     [setHabits, requestNotificationPermission]
+  );
+
+  const incrementHabit = useCallback(
+    (id: string, delta = 1) => {
+      const today = getToday();
+      setHabits((prev: Habit[]) =>
+        prev.map((habit) => {
+          if (habit.id !== id) return habit;
+          if (!habit.targetCount || habit.targetCount <= 0) return habit;
+          const currentCount = habit.progressByDate?.[today] || 0;
+          const nextCount = Math.max(0, currentCount + delta);
+          const newProgress = { ...(habit.progressByDate || {}), [today]: nextCount };
+          const reachedTarget = nextCount >= habit.targetCount;
+          const wasCompleted = habit.completionDates.includes(today);
+          let newDates = habit.completionDates;
+          if (reachedTarget && !wasCompleted) {
+            newDates = [...habit.completionDates, today];
+          } else if (!reachedTarget && wasCompleted) {
+            newDates = habit.completionDates.filter((d) => d !== today);
+          }
+          const isCompletedToday = reachedTarget;
+          const skipDates = habit.skipDates || [];
+          const freezeDates = habit.freezeDates || [];
+          const newStreak = calculateStreak(newDates, isCompletedToday, skipDates, freezeDates);
+          const newLongest = Math.max(calculateLongestStreak(newDates, skipDates, freezeDates), habit.longestStreak);
+          return {
+            ...habit,
+            progressByDate: newProgress,
+            completionDates: newDates,
+            isCompletedToday,
+            currentStreak: newStreak,
+            longestStreak: newLongest,
+          };
+        })
+      );
+    },
+    [setHabits]
   );
 
   const deleteHabit = useCallback(
@@ -667,6 +711,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         addHabit,
         deleteHabit,
         toggleHabit,
+        incrementHabit,
         toggleReminder,
         editHabit,
         reorderHabits,
