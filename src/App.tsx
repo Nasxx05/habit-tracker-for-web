@@ -1,4 +1,4 @@
-import { Component, type ReactNode, type ErrorInfo } from 'react';
+import { Component, useState, type ReactNode, type ErrorInfo } from 'react';
 import { HabitProvider, useHabits } from './context/HabitContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PremiumProvider } from './context/PremiumContext';
@@ -18,6 +18,7 @@ import InstallBanner from './components/InstallBanner';
 import StreakFreezeBanner from './components/StreakFreezeBanner';
 import StreakLossOverlay from './components/StreakLossOverlay';
 import StreakBadgeToast from './components/StreakBadgeToast';
+import AddHabitModal from './components/AddHabitModal';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -96,6 +97,8 @@ function StreakNotifications() {
 
 function AppContent() {
   const { currentView } = useHabits();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const openAddHabit = () => setShowAddModal(true);
 
   if (currentView === 'welcome') {
     return <WelcomeScreen />;
@@ -106,14 +109,15 @@ function AppContent() {
       <DesktopBlocker />
       <InstallBanner />
       <main>
-        {currentView === 'home' && <Dashboard />}
+        {currentView === 'home' && <Dashboard onOpenAddHabit={openAddHabit} />}
         {currentView === 'calendar' && <Calendar />}
         {currentView === 'habit-detail' && <HabitDetail />}
         {currentView === 'profile' && <Profile />}
         {currentView === 'stats' && <Stats />}
         {currentView === 'weekly-review' && <WeeklyReview />}
       </main>
-      <BottomNav />
+      <BottomNav onOpenAddHabit={openAddHabit} />
+      <AddHabitModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
       <UndoToast />
       <StreakNotifications />
       {currentView === 'home' && <TutorialGuide />}
