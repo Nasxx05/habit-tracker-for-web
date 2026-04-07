@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
+import UpgradeModal from './UpgradeModal';
 import type { HabitTemplate } from '../types/habit';
 
 const EMOJI_OPTIONS = [
@@ -33,7 +35,9 @@ interface AddHabitModalProps {
 }
 
 export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
-  const { addHabit } = useHabits();
+  const { addHabit, habits } = useHabits();
+  const { isPremium } = usePremium();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [name, setName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('💪');
   const [category, setCategory] = useState('General');
@@ -45,10 +49,15 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
 
   useEffect(() => {
     if (isOpen) {
+      if (!isPremium && habits.length >= FREE_HABIT_LIMIT) {
+        setShowUpgrade(true);
+        onClose();
+        return;
+      }
       setShowTemplates(true);
       setTimeout(() => inputRef.current?.focus(), 300);
     }
-  }, [isOpen]);
+  }, [isOpen, isPremium, habits.length, onClose]);
 
   const applyTemplate = (template: HabitTemplate) => {
     setName(template.name);
@@ -69,6 +78,11 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (!isPremium && habits.length >= FREE_HABIT_LIMIT) {
+      setShowUpgrade(true);
+      onClose();
+      return;
+    }
     addHabit(name.trim(), selectedEmoji, category, target, schedule, reminderTime || null);
     setName('');
     setSelectedEmoji('💪');
@@ -80,7 +94,9 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />;
+  }
 
   return (
     <div

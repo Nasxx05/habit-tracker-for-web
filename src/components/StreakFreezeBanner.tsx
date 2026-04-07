@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react';
 interface StreakFreezeBannerProps {
   habitName: string;
   habitEmoji: string;
+  freezesLeft: number;
   onDismiss: () => void;
 }
 
-export default function StreakFreezeBanner({ habitName, habitEmoji, onDismiss }: StreakFreezeBannerProps) {
+export default function StreakFreezeBanner({ habitName, habitEmoji, freezesLeft, onDismiss }: StreakFreezeBannerProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -30,9 +31,9 @@ export default function StreakFreezeBanner({ habitName, habitEmoji, onDismiss }:
             🧊
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-dark">Streak freeze saved you!</p>
+            <p className="text-sm font-bold text-dark">🧊 Streak freeze used!</p>
             <p className="text-xs text-muted mt-0.5">
-              {habitEmoji} {habitName} streak preserved
+              {habitEmoji} {habitName} preserved · You have {freezesLeft} left this week.
             </p>
           </div>
           <button

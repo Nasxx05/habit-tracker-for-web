@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHabits } from '../context/HabitContext';
+import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
 import HabitCard from './HabitCard';
 import AddHabitModal from './AddHabitModal';
 import AchievementsSection from './AchievementsSection';
+import UpgradeModal from './UpgradeModal';
 
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function Dashboard() {
-  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, freezeAvailable, notificationPermission, requestNotificationPermission } = useHabits();
+  const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, notificationPermission, requestNotificationPermission } = useHabits();
+  const { isPremium, freezesLeft } = usePremium();
+  const [showFreezeUpgrade, setShowFreezeUpgrade] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
@@ -142,18 +146,27 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Streak Freeze Status */}
+      {/* Streak Freeze Status — premium feature */}
       {isViewingToday && habits.length > 0 && (
         <section className="px-4 pt-1">
-          <div className="flex items-center gap-1.5 text-xs text-muted">
-            <span>🧊</span>
-            <span>
-              Streak freeze: {freezeAvailable
-                ? <span className="text-forest font-semibold">Available</span>
-                : <span className="text-peach font-semibold">Used this week</span>
-              }
-            </span>
-          </div>
+          {isPremium ? (
+            <div
+              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full"
+              title={`${freezesLeft} streak freezes left this week`}
+            >
+              <span>🧊</span>
+              <span>x{freezesLeft}</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowFreezeUpgrade(true)}
+              title="Upgrade to Premium to unlock Streak Freeze"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-gray-100 text-muted px-2.5 py-1 rounded-full hover:bg-gray-200 transition cursor-pointer"
+            >
+              <span>🔒</span>
+              <span>🧊 Streak Freeze — Premium only</span>
+            </button>
+          )}
         </section>
       )}
 
@@ -449,7 +462,17 @@ export default function Dashboard() {
         )}
       </section>
 
+      {/* Free Plan Indicator */}
+      {!isPremium && (
+        <section className="px-4 pt-4">
+          <div className="text-center text-xs text-muted">
+            Free Plan – {Math.min(habits.length, FREE_HABIT_LIMIT)}/{FREE_HABIT_LIMIT} habits used
+          </div>
+        </section>
+      )}
+
       <AddHabitModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
+      <UpgradeModal isOpen={showFreezeUpgrade} onClose={() => setShowFreezeUpgrade(false)} />
     </div>
   );
 }

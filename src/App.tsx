@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { HabitProvider, useHabits } from './context/HabitContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PremiumProvider } from './context/PremiumContext';
 import WelcomeScreen from './components/WelcomeScreen';
 import Dashboard from './components/Dashboard';
 import Calendar from './components/Calendar';
@@ -68,6 +69,7 @@ function StreakNotifications() {
         <StreakFreezeBanner
           habitName={freezeEvent.habitName}
           habitEmoji={freezeEvent.habitEmoji}
+          freezesLeft={freezeEvent.freezesLeft}
           onDismiss={dismissFreezeEvent}
         />
       )}
@@ -121,9 +123,11 @@ function AppContent() {
 function AppWithAuth() {
   const { user } = useAuth();
   return (
-    <HabitProvider syncUserId={user?.id ?? null}>
-      <AppContent />
-    </HabitProvider>
+    <PremiumProvider>
+      <HabitProvider syncUserId={user?.id ?? null}>
+        <AppContent />
+      </HabitProvider>
+    </PremiumProvider>
   );
 }
 
