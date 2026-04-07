@@ -10,20 +10,14 @@ interface PremiumContextType {
   loading: boolean;
   habitLimit: number | null; // null = unlimited
   freezesLeft: number;
-  /** Decrements freezes locally and in Supabase. Returns the new count, or -1 if not allowed. */
+  /**
+   * Asks the server to atomically consume one freeze. Returns the new count, or -1
+   * if not allowed. Optimistically updates local state and rolls back on failure.
+   */
   consumeFreeze: () => number;
 }
 
 const PremiumContext = createContext<PremiumContextType | null>(null);
-
-function daysBetween(a: Date, b: Date): number {
-  const ms = b.getTime() - a.getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -32,6 +26,8 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const freezesLeftRef = useRef(0);
   freezesLeftRef.current = freezesLeft;
+  const isPremiumRef = useRef(false);
+  isPremiumRef.current = isPremium;
 
   useEffect(() => {
     let cancelled = false;
@@ -44,31 +40,22 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         return;
       }
       setLoading(true);
-      const { data } = await supabase
-        .from('user_data')
-        .select('is_premium, freeze_count, last_freeze_reset')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Server-side RPC: reads tier and auto-refills the weekly freeze pool.
+      // The client cannot directly update is_premium / freeze_count anymore —
+      // a Postgres trigger blocks any client UPDATE to those columns.
+      const { data, error } = await supabase.rpc('get_freeze_status');
       if (cancelled) return;
 
-      const premium = Boolean(data?.is_premium);
-      let count = typeof data?.freeze_count === 'number' ? data.freeze_count : WEEKLY_FREEZE_ALLOWANCE;
-      const lastReset = data?.last_freeze_reset ? new Date(data.last_freeze_reset + 'T00:00:00') : null;
-      const now = new Date();
-
-      // Auto-reset: if last_freeze_reset was null or > 7 days ago, refill to 2.
-      const needsReset = !lastReset || daysBetween(lastReset, now) >= 7;
-      if (needsReset && premium) {
-        count = WEEKLY_FREEZE_ALLOWANCE;
-        await supabase
-          .from('user_data')
-          .update({ freeze_count: WEEKLY_FREEZE_ALLOWANCE, last_freeze_reset: todayISO() })
-          .eq('user_id', user.id);
+      if (error || !data || !Array.isArray(data) || data.length === 0) {
+        setIsPremium(false);
+        setFreezesLeft(0);
+        setLoading(false);
+        return;
       }
 
-      if (cancelled) return;
-      setIsPremium(premium);
-      setFreezesLeft(premium ? count : 0);
+      const row = data[0] as { is_premium: boolean; freeze_count: number };
+      setIsPremium(Boolean(row.is_premium));
+      setFreezesLeft(row.is_premium ? Number(row.freeze_count ?? 0) : 0);
       setLoading(false);
     }
 
@@ -79,21 +66,28 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const consumeFreeze = useCallback((): number => {
-    if (!isPremium) return -1;
+    if (!isPremiumRef.current) return -1;
     const current = freezesLeftRef.current;
     if (current <= 0) return -1;
-    const next = current - 1;
-    freezesLeftRef.current = next;
-    setFreezesLeft(next);
+    // Optimistic update — server is the source of truth and will reconcile.
+    const optimisticNext = current - 1;
+    freezesLeftRef.current = optimisticNext;
+    setFreezesLeft(optimisticNext);
     if (supabase && user) {
-      supabase
-        .from('user_data')
-        .update({ freeze_count: next })
-        .eq('user_id', user.id)
-        .then(() => {});
+      supabase.rpc('consume_freeze').then(({ data, error }) => {
+        if (error || typeof data !== 'number' || data < 0) {
+          // Rollback on failure.
+          freezesLeftRef.current = current;
+          setFreezesLeft(current);
+          return;
+        }
+        // Reconcile with the authoritative server value.
+        freezesLeftRef.current = data;
+        setFreezesLeft(data);
+      });
     }
-    return next;
-  }, [isPremium, user]);
+    return optimisticNext;
+  }, [user]);
 
   return (
     <PremiumContext.Provider
