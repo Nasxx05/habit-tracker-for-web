@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from './AuthModal';
+import SettingsModal from './SettingsModal';
 
 export default function Profile() {
   const { habits, profile, updateProfile, milestones, setCurrentView, exportData, importData } = useHabits();
@@ -13,6 +14,7 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [importMsg, setImportMsg] = useState('');
 
   const handleExportJSON = () => {
@@ -117,8 +119,15 @@ export default function Profile() {
 
   return (
     <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark">Profile</h1>
+        <button
+          onClick={() => setShowSettings(true)}
+          aria-label="Settings"
+          className="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-lg cursor-pointer hover:bg-sage-light transition"
+        >
+          ⚙️
+        </button>
       </div>
 
       {/* Profile Card */}
@@ -289,6 +298,7 @@ export default function Profile() {
       </section>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }
