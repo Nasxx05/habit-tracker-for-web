@@ -54,7 +54,7 @@ export default function BottomNav() {
       <button
         key={item.view}
         onClick={() => setCurrentView(item.view)}
-        className="flex-1 flex items-center justify-center py-5 cursor-pointer"
+        className="flex-1 flex items-center justify-center py-3 cursor-pointer"
       >
         {item.icon(isActive)}
       </button>
@@ -62,13 +62,13 @@ export default function BottomNav() {
   };
 
   return (
-    <div data-tutorial="bottom-nav" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-      <div className="max-w-3xl mx-auto flex items-center relative">
+    <div data-tutorial="bottom-nav" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-[max(env(safe-area-inset-bottom),1.25rem)]">
+      <div className="max-w-3xl mx-auto flex items-center relative pt-2">
         {leftItems.map(renderTab)}
         <div className="flex-1" />
         {rightItems.map(renderTab)}
 
-        <div className="absolute inset-x-0 -top-6 flex justify-center pointer-events-none">
+        <div className="absolute inset-x-0 -top-7 flex justify-center pointer-events-none">
           <button
             data-tutorial="fab"
             onClick={() => {
