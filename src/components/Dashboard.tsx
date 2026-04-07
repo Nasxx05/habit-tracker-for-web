@@ -285,9 +285,9 @@ export default function Dashboard() {
                         });
                         setShowJourneyMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer"
                     >
-                      <span>✅</span> Complete All
+                      Complete All
                     </button>
                   )}
                   <button
@@ -296,28 +296,28 @@ export default function Dashboard() {
                       navigator.clipboard.writeText(text);
                       setShowJourneyMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer"
                   >
-                    <span>📋</span> Copy Progress
+                    Copy Progress
                   </button>
                   <button
                     onClick={() => { setCurrentView('calendar'); setShowJourneyMenu(false); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer"
                   >
-                    <span>📅</span> Full Calendar
+                    Full Calendar
                   </button>
                   <button
                     onClick={() => { setCurrentView('weekly-review'); setShowJourneyMenu(false); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                    className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer"
                   >
-                    <span>📊</span> Weekly Review
+                    Weekly Review
                   </button>
                   {!isViewingToday && (
                     <button
                       onClick={() => { setSelectedDate(todayStr); setShowJourneyMenu(false); }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer"
                     >
-                      <span>📍</span> Back to Today
+                      Back to Today
                     </button>
                   )}
                 </div>
@@ -326,13 +326,6 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-4 mb-3">
             <p className="text-4xl font-bold text-forest">{percent}%</p>
-            <div className="flex gap-2">
-              {scheduledToday.slice(0, 4).map((h) => (
-                <span key={h.id} className="w-8 h-8 bg-mint rounded-full flex items-center justify-center text-sm">
-                  {h.emoji}
-                </span>
-              ))}
-            </div>
           </div>
           <p className="text-sm text-muted mb-3">
             {displayCompleted} of {displayTotal} Completed

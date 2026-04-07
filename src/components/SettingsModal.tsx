@@ -79,10 +79,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setSection('menu');
   };
 
-  const menuItems: { icon: string; label: string; section: Section }[] = [
-    { icon: '💾', label: 'Data Backup', section: 'backup' },
-    { icon: '✏️', label: 'Edit Profile', section: 'profile' },
-    { icon: '🔔', label: 'Notifications', section: 'notifications' },
+  const menuItems: { label: string; section: Section }[] = [
+    { label: 'Data Backup', section: 'backup' },
+    { label: 'Edit Profile', section: 'profile' },
+    { label: 'Notifications', section: 'notifications' },
   ];
 
   return (
@@ -117,7 +117,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     i < menuItems.length - 1 ? 'border-b border-gray-100' : ''
                   }`}
                 >
-                  <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">{item.icon}</span>
                   <span className="text-sm font-medium text-dark flex-1 text-left">{item.label}</span>
                   <span className="text-muted text-sm">›</span>
                 </button>
@@ -128,7 +127,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 onClick={toggleTheme}
                 className="w-full flex items-center gap-3 px-4 py-4 hover:bg-mint transition cursor-pointer"
               >
-                <span className="w-9 h-9 bg-mint rounded-full flex items-center justify-center text-lg">{theme === 'dark' ? '🌙' : '☀️'}</span>
                 <span className="text-sm font-medium text-dark flex-1 text-left">Dark Mode</span>
                 <span className={`relative inline-flex w-10 h-6 rounded-full transition ${theme === 'dark' ? 'bg-forest' : 'bg-gray-300'}`}>
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-4' : ''}`} />
