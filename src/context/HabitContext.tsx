@@ -5,6 +5,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { getToday, formatDate } from '../utils/dateHelpers';
 import { calculateStreak, calculateLongestStreak, STREAK_MILESTONES } from '../utils/streakCalculator';
 import { uploadData, downloadData } from '../lib/sync';
+import { usePremium } from './PremiumContext';
 
 const DEFAULT_MILESTONES: Milestone[] = [
   { id: 'first-step', name: 'First Step', description: 'Complete 1 habit', icon: '🌱', unlocked: false, unlockedAt: null },
@@ -16,19 +17,11 @@ const DEFAULT_MILESTONES: Milestone[] = [
   { id: 'reflective', name: 'Reflective', description: '10 Reflections', icon: '📝', unlocked: false, unlockedAt: null },
 ];
 
-function getISOWeekKey(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  const weekNum = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-  return `${d.getFullYear()}-W${weekNum}`;
-}
-
 interface FreezeEvent {
   habitId: string;
   habitName: string;
   habitEmoji: string;
+  freezesLeft: number;
 }
 
 interface StreakLossEvent {
@@ -58,7 +51,6 @@ interface HabitContextType {
   freezeEvent: FreezeEvent | null;
   streakLossEvent: StreakLossEvent | null;
   badgeEvent: BadgeEvent | null;
-  freezeAvailable: boolean;
   notificationPermission: NotificationPermission | 'unsupported';
   setHasCollectedDetails: (value: boolean) => void;
   addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null) => void;
@@ -124,8 +116,14 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
   const [hasCollectedDetails, setHasCollectedDetails] = useLocalStorage<boolean>('hasCollectedDetails', false);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
 
-  // Streak freeze state
-  const [streakFreezeWeek, setStreakFreezeWeek] = useLocalStorage<string>('streakFreezeWeek', '');
+  // Streak freeze state — premium feature, backed by PremiumContext / Supabase
+  const { isPremium, freezesLeft, consumeFreeze } = usePremium();
+  const isPremiumRef = useRef(isPremium);
+  const freezesLeftRef = useRef(freezesLeft);
+  const consumeFreezeRef = useRef(consumeFreeze);
+  isPremiumRef.current = isPremium;
+  freezesLeftRef.current = freezesLeft;
+  consumeFreezeRef.current = consumeFreeze;
   const [freezeEvent, setFreezeEvent] = useState<FreezeEvent | null>(null);
 
   // Streak loss state
@@ -134,9 +132,6 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
   // Streak badges
   const [streakBadges, setStreakBadges] = useLocalStorage<StreakBadge[]>('streakBadges', []);
   const [badgeEvent, setBadgeEvent] = useState<BadgeEvent | null>(null);
-
-  const currentWeek = getISOWeekKey(new Date());
-  const freezeAvailable = streakFreezeWeek !== currentWeek;
 
   // --- Cloud sync ---
   const hasSyncedRef = useRef(false);
@@ -222,31 +217,31 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
       const missedDate = lastActiveDate; // The day that was missed
       const missedDateObj = new Date(missedDate + 'T12:00:00');
       const missedDow = missedDateObj.getDay();
-      const week = getISOWeekKey(new Date());
-      let freezeUsedThisReset = streakFreezeWeek === week;
+      // Premium-gated freeze pool from Supabase. Free users get 0.
+      let freezesAvailable = isPremiumRef.current ? freezesLeftRef.current : 0;
       let freezeAppliedTo: FreezeEvent | null = null;
       let streakLost: StreakLossEvent | null = null;
 
       setHabits((prev: Habit[]) => {
-        // Find habit with highest streak that missed yesterday (for freeze priority)
+        // Find habits that missed yesterday and had an active streak — sorted by streak desc.
+        // Freeze as many as we have freezes for, prioritizing the highest streaks.
         const habitsNeedingFreeze = prev
           .filter((h) => {
-            if (!h.schedule.includes(missedDow)) return false; // Not scheduled
-            if (h.completionDates.includes(missedDate)) return false; // Was completed
-            if ((h.skipDates || []).includes(missedDate)) return false; // Was skipped
-            if ((h.freezeDates || []).includes(missedDate)) return false; // Already frozen
-            const streak = calculateStreak(h.completionDates, false, h.skipDates || [], h.freezeDates || []);
-            // Check if this habit HAD a streak before missing
-            // We need to check if the day before missedDate was part of a streak
+            if (!h.schedule.includes(missedDow)) return false;
+            if (h.completionDates.includes(missedDate)) return false;
+            if ((h.skipDates || []).includes(missedDate)) return false;
+            if ((h.freezeDates || []).includes(missedDate)) return false;
             const dayBefore = new Date(missedDateObj);
             dayBefore.setDate(dayBefore.getDate() - 1);
             const dayBeforeStr = formatDate(dayBefore);
             const hadStreak = h.completionDates.includes(dayBeforeStr) ||
               (h.skipDates || []).includes(dayBeforeStr) ||
               (h.freezeDates || []).includes(dayBeforeStr);
-            return hadStreak || streak > 0;
+            return hadStreak || h.currentStreak > 0;
           })
           .sort((a, b) => b.currentStreak - a.currentStreak);
+
+        const freezeIds = new Set(habitsNeedingFreeze.slice(0, freezesAvailable).map((h) => h.id));
 
         return prev.map((habit) => {
           const freezeDates = habit.freezeDates || [];
@@ -254,16 +249,24 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
           const wasScheduled = habit.schedule.includes(missedDow);
           const wasCompleted = habit.completionDates.includes(missedDate);
           const wasSkipped = skipDates.includes(missedDate);
-          const needsFreeze = wasScheduled && !wasCompleted && !wasSkipped &&
-            habitsNeedingFreeze.length > 0 && habitsNeedingFreeze[0].id === habit.id;
 
           let newFreezeDates = freezeDates;
 
-          if (needsFreeze && !freezeUsedThisReset) {
-            // Apply freeze
-            newFreezeDates = [...freezeDates, missedDate];
-            freezeUsedThisReset = true;
-            freezeAppliedTo = { habitId: habit.id, habitName: habit.name, habitEmoji: habit.emoji };
+          if (freezeIds.has(habit.id)) {
+            // Consume one freeze from the pool (Supabase + local state)
+            const remaining = consumeFreezeRef.current();
+            if (remaining >= 0) {
+              newFreezeDates = [...freezeDates, missedDate];
+              freezesAvailable = remaining;
+              if (!freezeAppliedTo) {
+                freezeAppliedTo = {
+                  habitId: habit.id,
+                  habitName: habit.name,
+                  habitEmoji: habit.emoji,
+                  freezesLeft: remaining,
+                };
+              }
+            }
           } else if (wasScheduled && !wasCompleted && !wasSkipped && habit.currentStreak > 0) {
             // Streak breaks — record for loss animation
             if (!streakLost || habit.currentStreak > streakLost.lostStreak) {
@@ -298,7 +301,6 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
       });
 
       if (freezeAppliedTo) {
-        setStreakFreezeWeek(week);
         // Delay showing the event so state settles
         setTimeout(() => setFreezeEvent(freezeAppliedTo), 500);
       }
@@ -307,7 +309,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
       }
     }
     setLastActiveDate(today);
-  }, [lastActiveDate, setHabits, setLastActiveDate, streakFreezeWeek, setStreakFreezeWeek]);
+  }, [lastActiveDate, setHabits, setLastActiveDate]);
 
   // Midnight check interval
   useEffect(() => {
@@ -660,7 +662,6 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         freezeEvent,
         streakLossEvent,
         badgeEvent,
-        freezeAvailable,
         notificationPermission,
         setHasCollectedDetails,
         addHabit,

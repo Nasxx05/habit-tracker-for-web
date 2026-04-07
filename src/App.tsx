@@ -69,6 +69,7 @@ function StreakNotifications() {
         <StreakFreezeBanner
           habitName={freezeEvent.habitName}
           habitEmoji={freezeEvent.habitEmoji}
+          freezesLeft={freezeEvent.freezesLeft}
           onDismiss={dismissFreezeEvent}
         />
       )}
