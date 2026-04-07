@@ -17,14 +17,17 @@ create table if not exists public.user_data (
 alter table public.user_data enable row level security;
 
 -- 3. RLS Policies — users can only access their own data
+drop policy if exists "Users can read own data" on public.user_data;
 create policy "Users can read own data"
   on public.user_data for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own data" on public.user_data;
 create policy "Users can insert own data"
   on public.user_data for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own data" on public.user_data;
 create policy "Users can update own data"
   on public.user_data for update
   using (auth.uid() = user_id);
