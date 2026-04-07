@@ -138,18 +138,18 @@ export default function HabitDetail() {
           {showMenu && (
             <div className="absolute right-0 top-12 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-48 animate-fade-in z-20">
               <button onClick={() => { setShowMenu(false); setShowEdit(true); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">✏️ Edit Habit</button>
+                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">Edit Habit</button>
               <button onClick={() => { toggleHabit(habit.id); setShowMenu(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                {habit.isCompletedToday ? '↩️ Undo Today' : '✅ Complete Today'}
+                {habit.isCompletedToday ? 'Undo Today' : 'Complete Today'}
               </button>
               <button onClick={() => { toggleSkipDay(habit.id, todayStr); setShowMenu(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                {isSkippedToday ? '🔄 Remove Skip' : '💤 Skip Today (Rest Day)'}
+                {isSkippedToday ? 'Remove Skip' : 'Skip Today (Rest Day)'}
               </button>
               <button onClick={() => { setShowMenu(false); if (isPremium) setShowShare(true); else setShowShareUpgrade(true); }}
                 className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                📤 Share Progress {!isPremium && <span className="text-xs text-muted">· Premium</span>}
+                Share Progress {!isPremium && <span className="text-xs text-muted">· Premium</span>}
               </button>
             </div>
           )}
