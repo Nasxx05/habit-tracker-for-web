@@ -3,30 +3,25 @@ import { useHabits } from '../context/HabitContext';
 import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
 import HabitCard from './HabitCard';
-import AddHabitModal from './AddHabitModal';
 import AchievementsSection from './AchievementsSection';
 import UpgradeModal from './UpgradeModal';
 
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-export default function Dashboard() {
+interface DashboardProps {
+  onOpenAddHabit: () => void;
+}
+
+export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
   const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, notificationPermission, requestNotificationPermission } = useHabits();
   const { isPremium, freezesLeft } = usePremium();
   const [showFreezeUpgrade, setShowFreezeUpgrade] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
-
-  // Listen for FAB open event
-  useEffect(() => {
-    const handler = () => setShowAddModal(true);
-    window.addEventListener('open-add-habit', handler);
-    return () => window.removeEventListener('open-add-habit', handler);
-  }, []);
 
   // Close journey menu when clicking outside
   useEffect(() => {
@@ -368,7 +363,7 @@ export default function Dashboard() {
             {isViewingToday ? "Today's Habits" : `Habits · ${selDateDisplay}`}
           </h2>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={onOpenAddHabit}
             className="px-4 py-1.5 rounded-full bg-mint text-forest text-sm font-semibold hover:bg-sage-light transition cursor-pointer"
           >
             + New
@@ -381,7 +376,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold text-dark mb-1">No habits yet!</h3>
             <p className="text-muted text-sm mb-5">Start by adding your first habit to track.</p>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={onOpenAddHabit}
               className="bg-forest text-white font-semibold px-6 py-3 rounded-full hover:bg-forest/90 transition cursor-pointer"
             >
               + Add Your First Habit
@@ -464,7 +459,6 @@ export default function Dashboard() {
         </section>
       )}
 
-      <AddHabitModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
       <UpgradeModal isOpen={showFreezeUpgrade} onClose={() => setShowFreezeUpgrade(false)} />
     </div>
   );
