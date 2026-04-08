@@ -214,117 +214,124 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
     });
   }, [habits, reflections, setMilestones]);
 
-  // Reset daily completion status when the day changes — with freeze logic
+  // Reset daily completion status when the day changes — with freeze logic.
+  // Runs on mount and every 60s so habits reset correctly even when the app
+  // stays open across midnight. A ref tracks lastActiveDate so the interval
+  // closure always sees the previous date before updating it.
+  const lastActiveDateRef = useRef(lastActiveDate);
+  lastActiveDateRef.current = lastActiveDate;
+
   useEffect(() => {
-    const today = getToday();
-    if (lastActiveDate && lastActiveDate !== today) {
-      const missedDate = lastActiveDate; // The day that was missed
-      const missedDateObj = new Date(missedDate + 'T12:00:00');
-      const missedDow = missedDateObj.getDay();
-      // Premium-gated freeze pool from Supabase. Free users get 0.
-      let freezesAvailable = isPremiumRef.current ? freezesLeftRef.current : 0;
-      let freezeAppliedTo: FreezeEvent | null = null;
-      let streakLost: StreakLossEvent | null = null;
+    const runDayChangeCheck = () => {
+      const today = getToday();
+      const prevDate = lastActiveDateRef.current;
 
-      setHabits((prev: Habit[]) => {
-        // Find habits that missed yesterday and had an active streak — sorted by streak desc.
-        // Freeze as many as we have freezes for, prioritizing the highest streaks.
-        const habitsNeedingFreeze = prev
-          .filter((h) => {
-            if (!h.schedule.includes(missedDow)) return false;
-            if (h.completionDates.includes(missedDate)) return false;
-            if ((h.skipDates || []).includes(missedDate)) return false;
-            if ((h.freezeDates || []).includes(missedDate)) return false;
-            const dayBefore = new Date(missedDateObj);
-            dayBefore.setDate(dayBefore.getDate() - 1);
-            const dayBeforeStr = formatDate(dayBefore);
-            const hadStreak = h.completionDates.includes(dayBeforeStr) ||
-              (h.skipDates || []).includes(dayBeforeStr) ||
-              (h.freezeDates || []).includes(dayBeforeStr);
-            return hadStreak || h.currentStreak > 0;
-          })
-          .sort((a, b) => b.currentStreak - a.currentStreak);
+      if (prevDate && prevDate !== today) {
+        const missedDate = prevDate; // The day that was missed
+        const missedDateObj = new Date(missedDate + 'T12:00:00');
+        const missedDow = missedDateObj.getDay();
+        // Premium-gated freeze pool from Supabase. Free users get 0.
+        let freezesAvailable = isPremiumRef.current ? freezesLeftRef.current : 0;
+        let freezeAppliedTo: FreezeEvent | null = null;
+        let streakLost: StreakLossEvent | null = null;
 
-        const freezeIds = new Set(habitsNeedingFreeze.slice(0, freezesAvailable).map((h) => h.id));
+        setHabits((prev: Habit[]) => {
+          // Find habits that missed yesterday and had an active streak — sorted by streak desc.
+          // Freeze as many as we have freezes for, prioritizing the highest streaks.
+          const habitsNeedingFreeze = prev
+            .filter((h) => {
+              if (!h.schedule.includes(missedDow)) return false;
+              if (h.completionDates.includes(missedDate)) return false;
+              if ((h.skipDates || []).includes(missedDate)) return false;
+              if ((h.freezeDates || []).includes(missedDate)) return false;
+              const dayBefore = new Date(missedDateObj);
+              dayBefore.setDate(dayBefore.getDate() - 1);
+              const dayBeforeStr = formatDate(dayBefore);
+              const hadStreak = h.completionDates.includes(dayBeforeStr) ||
+                (h.skipDates || []).includes(dayBeforeStr) ||
+                (h.freezeDates || []).includes(dayBeforeStr);
+              return hadStreak || h.currentStreak > 0;
+            })
+            .sort((a, b) => b.currentStreak - a.currentStreak);
 
-        return prev.map((habit) => {
-          const freezeDates = habit.freezeDates || [];
-          const skipDates = habit.skipDates || [];
-          const wasScheduled = habit.schedule.includes(missedDow);
-          const wasCompleted = habit.completionDates.includes(missedDate);
-          const wasSkipped = skipDates.includes(missedDate);
+          const freezeIds = new Set(habitsNeedingFreeze.slice(0, freezesAvailable).map((h) => h.id));
 
-          let newFreezeDates = freezeDates;
+          return prev.map((habit) => {
+            const freezeDates = habit.freezeDates || [];
+            const skipDates = habit.skipDates || [];
+            const wasScheduled = habit.schedule.includes(missedDow);
+            const wasCompleted = habit.completionDates.includes(missedDate);
+            const wasSkipped = skipDates.includes(missedDate);
 
-          if (freezeIds.has(habit.id)) {
-            // Consume one freeze from the pool (Supabase + local state)
-            const remaining = consumeFreezeRef.current();
-            if (remaining >= 0) {
-              newFreezeDates = [...freezeDates, missedDate];
-              freezesAvailable = remaining;
-              if (!freezeAppliedTo) {
-                freezeAppliedTo = {
+            let newFreezeDates = freezeDates;
+
+            if (freezeIds.has(habit.id)) {
+              // Consume one freeze from the pool (Supabase + local state)
+              const remaining = consumeFreezeRef.current();
+              if (remaining >= 0) {
+                newFreezeDates = [...freezeDates, missedDate];
+                freezesAvailable = remaining;
+                if (!freezeAppliedTo) {
+                  freezeAppliedTo = {
+                    habitId: habit.id,
+                    habitName: habit.name,
+                    habitEmoji: habit.emoji,
+                    freezesLeft: remaining,
+                  };
+                }
+              }
+            } else if (wasScheduled && !wasCompleted && !wasSkipped && habit.currentStreak > 0) {
+              // Streak breaks — record for loss animation
+              if (!streakLost || habit.currentStreak > streakLost.lostStreak) {
+                streakLost = {
                   habitId: habit.id,
                   habitName: habit.name,
                   habitEmoji: habit.emoji,
-                  freezesLeft: remaining,
+                  lostStreak: habit.currentStreak,
                 };
               }
             }
-          } else if (wasScheduled && !wasCompleted && !wasSkipped && habit.currentStreak > 0) {
-            // Streak breaks — record for loss animation
-            if (!streakLost || habit.currentStreak > streakLost.lostStreak) {
-              streakLost = {
-                habitId: habit.id,
-                habitName: habit.name,
-                habitEmoji: habit.emoji,
-                lostStreak: habit.currentStreak,
-              };
-            }
-          }
 
-          const newStreak = calculateStreak(
-            habit.completionDates,
-            habit.completionDates.includes(today),
-            skipDates,
-            newFreezeDates
-          );
-          const newLongest = Math.max(
-            calculateLongestStreak(habit.completionDates, skipDates, newFreezeDates),
-            habit.longestStreak
-          );
+            const newStreak = calculateStreak(
+              habit.completionDates,
+              habit.completionDates.includes(today),
+              skipDates,
+              newFreezeDates
+            );
+            const newLongest = Math.max(
+              calculateLongestStreak(habit.completionDates, skipDates, newFreezeDates),
+              habit.longestStreak
+            );
 
-          return {
-            ...habit,
-            freezeDates: newFreezeDates,
-            isCompletedToday: habit.completionDates.includes(today),
-            currentStreak: newStreak,
-            longestStreak: newLongest,
-          };
+            return {
+              ...habit,
+              freezeDates: newFreezeDates,
+              isCompletedToday: habit.completionDates.includes(today),
+              currentStreak: newStreak,
+              longestStreak: newLongest,
+            };
+          });
         });
-      });
 
-      if (freezeAppliedTo) {
-        // Delay showing the event so state settles
-        setTimeout(() => setFreezeEvent(freezeAppliedTo), 500);
+        if (freezeAppliedTo) {
+          // Delay showing the event so state settles
+          setTimeout(() => setFreezeEvent(freezeAppliedTo), 500);
+        }
+        if (streakLost) {
+          setTimeout(() => setStreakLossEvent(streakLost), freezeAppliedTo ? 5000 : 500);
+        }
       }
-      if (streakLost) {
-        setTimeout(() => setStreakLossEvent(streakLost), freezeAppliedTo ? 5000 : 500);
-      }
-    }
-    setLastActiveDate(today);
-  }, [lastActiveDate, setHabits, setLastActiveDate]);
 
-  // Midnight check interval
-  useEffect(() => {
-    const checkMidnight = setInterval(() => {
-      const today = getToday();
-      if (lastActiveDate !== today) {
+      if (prevDate !== today) {
+        lastActiveDateRef.current = today;
         setLastActiveDate(today);
       }
-    }, 60000);
-    return () => clearInterval(checkMidnight);
-  }, [lastActiveDate, setLastActiveDate]);
+    };
+
+    runDayChangeCheck();
+    const interval = setInterval(runDayChangeCheck, 60000);
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Notification permission state
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(
