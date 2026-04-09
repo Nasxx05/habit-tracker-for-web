@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import type { Habit } from '../types/habit';
 import { useHabits } from '../context/HabitContext';
+import { getToday } from '../utils/dateHelpers';
 import CompletionCelebration from './CompletionCelebration';
 import PersonalDetailsModal from './PersonalDetailsModal';
 
@@ -41,7 +42,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
     selectHabit(habit.id);
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getToday();
   const isQuantitative = !!(habit.targetCount && habit.targetCount > 0);
   const todayCount = habit.progressByDate?.[today] || 0;
   const progressPct = isQuantitative ? Math.min(100, Math.round((todayCount / (habit.targetCount as number)) * 100)) : 0;
