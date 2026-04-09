@@ -4,7 +4,6 @@ import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
 import HabitCard from './HabitCard';
 import AchievementsSection from './AchievementsSection';
-import UpgradeModal from './UpgradeModal';
 
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -14,8 +13,8 @@ interface DashboardProps {
 
 export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
   const { habits, scheduledToday, completedToday, totalHabits, profile, setCurrentView, toggleHabit, reorderHabits, streakBadges, notificationPermission, requestNotificationPermission } = useHabits();
-  const { isPremium, freezesLeft } = usePremium();
-  const [showFreezeUpgrade, setShowFreezeUpgrade] = useState(false);
+  const { isPremium } = usePremium();
+
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -140,30 +139,6 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
           </button>
         </div>
       </section>
-
-      {/* Streak Freeze Status — premium feature */}
-      {isViewingToday && habits.length > 0 && (
-        <section className="px-4 pt-1">
-          {isPremium ? (
-            <div
-              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full"
-              title={`${freezesLeft} streak freezes left this week`}
-            >
-              <span>🧊</span>
-              <span>x{freezesLeft}</span>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowFreezeUpgrade(true)}
-              title="Upgrade to Premium to unlock Streak Freeze"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold bg-gray-100 text-muted px-2.5 py-1 rounded-full hover:bg-gray-200 transition cursor-pointer"
-            >
-              <span>🔒</span>
-              <span>🧊 Streak Freeze — Premium only</span>
-            </button>
-          )}
-        </section>
-      )}
 
       {/* Notification Permission Banner */}
       {isViewingToday && habits.some((h) => h.reminderTime) && notificationPermission === 'denied' && (
@@ -459,7 +434,6 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
         </section>
       )}
 
-      <UpgradeModal isOpen={showFreezeUpgrade} onClose={() => setShowFreezeUpgrade(false)} />
     </div>
   );
 }

@@ -66,7 +66,7 @@ function getInsights(habit: { name: string; currentStreak: number; longestStreak
 
 export default function HabitDetail() {
   const { habits, selectedHabitId, setCurrentView, reflections, addReflection, toggleHabit, toggleSkipDay } = useHabits();
-  const { isPremium } = usePremium();
+  const { isPremium, freezesLeft } = usePremium();
   const habit = habits.find((h) => h.id === selectedHabitId);
 
   const today = new Date();
@@ -151,6 +151,18 @@ export default function HabitDetail() {
                 className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
                 Share Progress {!isPremium && <span className="text-xs text-muted">· Premium</span>}
               </button>
+              <div className="border-t border-gray-100 my-1" />
+              {isPremium ? (
+                <div className="px-4 py-2.5 text-sm text-dark flex items-center justify-between">
+                  <span>Streak Freeze</span>
+                  <span className="text-xs font-semibold text-blue-500">🧊 {freezesLeft} left</span>
+                </div>
+              ) : (
+                <button onClick={() => { setShowMenu(false); setShowShareUpgrade(true); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
+                  Streak Freeze <span className="text-xs text-muted">· Premium</span>
+                </button>
+              )}
             </div>
           )}
         </div>

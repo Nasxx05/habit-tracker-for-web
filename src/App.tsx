@@ -11,7 +11,6 @@ import Profile from './components/Profile';
 import Stats from './components/Stats';
 import WeeklyReview from './components/WeeklyReview';
 import BottomNav from './components/BottomNav';
-import UndoToast from './components/UndoToast';
 import TutorialGuide from './components/TutorialGuide';
 import DesktopBlocker from './components/DesktopBlocker';
 import InstallBanner from './components/InstallBanner';
@@ -118,7 +117,6 @@ function AppContent() {
       </main>
       <BottomNav onOpenAddHabit={openAddHabit} />
       <AddHabitModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
-      <UndoToast />
       <StreakNotifications />
       {currentView === 'home' && <TutorialGuide />}
     </div>
