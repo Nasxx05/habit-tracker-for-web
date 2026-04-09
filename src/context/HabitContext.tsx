@@ -84,21 +84,29 @@ const HabitContext = createContext<HabitContextType | null>(null);
 // Ensure all habits have required fields (handles data from older versions)
 function migrateHabits(rawHabits: Habit[]): Habit[] {
   if (!Array.isArray(rawHabits)) return [];
-  return rawHabits.filter((h) => h && typeof h === 'object' && h.id).map((h) => ({
-    ...h,
-    schedule: Array.isArray(h.schedule) ? h.schedule : [0, 1, 2, 3, 4, 5, 6],
-    skipDates: Array.isArray(h.skipDates) ? h.skipDates : [],
-    freezeDates: Array.isArray(h.freezeDates) ? h.freezeDates : [],
-    target: h.target || '',
-    targetCount: typeof h.targetCount === 'number' ? h.targetCount : null,
-    progressByDate: h.progressByDate && typeof h.progressByDate === 'object' ? h.progressByDate : {},
-    color: typeof h.color === 'string' ? h.color : null,
-    reminderTime: h.reminderTime ?? null,
-    completionDates: Array.isArray(h.completionDates) ? h.completionDates : [],
-    createdAt: h.createdAt || new Date().toISOString(),
-    longestStreak: h.longestStreak || 0,
-    currentStreak: h.currentStreak || 0,
-  }));
+  const today = getToday();
+  return rawHabits.filter((h) => h && typeof h === 'object' && h.id).map((h) => {
+    const completionDates = Array.isArray(h.completionDates) ? h.completionDates : [];
+    const skipDates = Array.isArray(h.skipDates) ? h.skipDates : [];
+    const freezeDates = Array.isArray(h.freezeDates) ? h.freezeDates : [];
+    const isCompletedToday = completionDates.includes(today);
+    return {
+      ...h,
+      schedule: Array.isArray(h.schedule) ? h.schedule : [0, 1, 2, 3, 4, 5, 6],
+      skipDates,
+      freezeDates,
+      target: h.target || '',
+      targetCount: typeof h.targetCount === 'number' ? h.targetCount : null,
+      progressByDate: h.progressByDate && typeof h.progressByDate === 'object' ? h.progressByDate : {},
+      color: typeof h.color === 'string' ? h.color : null,
+      reminderTime: h.reminderTime ?? null,
+      completionDates,
+      createdAt: h.createdAt || new Date().toISOString(),
+      longestStreak: h.longestStreak || 0,
+      currentStreak: calculateStreak(completionDates, isCompletedToday, skipDates, freezeDates),
+      isCompletedToday,
+    };
+  });
 }
 
 export function HabitProvider({ children, syncUserId }: { children: ReactNode; syncUserId?: string | null }) {
