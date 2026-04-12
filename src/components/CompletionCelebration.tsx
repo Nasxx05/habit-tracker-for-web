@@ -53,7 +53,7 @@ export default function CompletionCelebration({ habit, isOpen, onClose }: Comple
       decay: 0.94,
       startVelocity: 30,
       shapes: ['circle' as const],
-      colors: ['#A8C5B8', '#2D4A3E', '#EAF2ED', '#E8985E', '#f5c9a3', '#c3d9cf'],
+      colors: ['#A29BFE', '#6C5CE7', '#EDE9FC', '#4ECDC4', '#B2ECE6', '#D5CEF0'],
       scalar: 1.2,
     };
 

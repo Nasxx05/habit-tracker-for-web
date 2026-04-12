@@ -146,7 +146,7 @@ export default function HeatmapChart({ habits, todayStr }: WeeklyTrendProps) {
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  stroke="#A8C5B8"
+                  stroke="#A29BFE"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                 />
@@ -186,7 +186,7 @@ export default function HeatmapChart({ habits, todayStr }: WeeklyTrendProps) {
                     top: `${yPos - 20}px`,
                     fontSize: '11px',
                     fontWeight: 700,
-                    color: '#2D4A3E',
+                    color: '#6C5CE7',
                     opacity: isActive ? 1 : 0,
                     transition: 'opacity 0.15s',
                     whiteSpace: 'nowrap',
@@ -203,7 +203,7 @@ export default function HeatmapChart({ habits, todayStr }: WeeklyTrendProps) {
                     width: isActive ? '14px' : '10px',
                     height: isActive ? '14px' : '10px',
                     borderRadius: '50%',
-                    backgroundColor: w.isCurrent ? '#2D4A3E' : '#A8C5B8',
+                    backgroundColor: w.isCurrent ? '#6C5CE7' : '#A29BFE',
                     border: '2.5px solid #fff',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                     transition: 'all 0.15s',
@@ -219,7 +219,7 @@ export default function HeatmapChart({ habits, todayStr }: WeeklyTrendProps) {
                     fontSize: '10px',
                     whiteSpace: 'nowrap',
                     fontWeight: w.isCurrent ? 600 : 400,
-                    color: w.isCurrent ? '#2D4A3E' : undefined,
+                    color: w.isCurrent ? '#6C5CE7' : undefined,
                   }}
                 >
                   {w.label}

@@ -24,9 +24,9 @@ export default function ShareCardModal({ habit, isOpen, onClose }: Props) {
 
     // Background gradient
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    const accent = habit.color || '#2D4A3E';
-    grad.addColorStop(0, '#F5F5F0');
-    grad.addColorStop(1, '#EAF2ED');
+    const accent = habit.color || '#6C5CE7';
+    grad.addColorStop(0, '#F0EDF6');
+    grad.addColorStop(1, '#EDE9FC');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 

@@ -44,13 +44,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
               localStorage.clear();
               window.location.reload();
             }}
-            style={{ padding: '0.75rem 1.5rem', background: '#2D4A3E', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', marginRight: '0.5rem' }}
+            style={{ padding: '0.75rem 1.5rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', marginRight: '0.5rem' }}
           >
             Reset App Data
           </button>
           <button
             onClick={() => window.location.reload()}
-            style={{ padding: '0.75rem 1.5rem', background: '#A8C5B8', color: '#2D4A3E', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+            style={{ padding: '0.75rem 1.5rem', background: '#D5CEF0', color: '#6C5CE7', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
           >
             Reload
           </button>

@@ -89,7 +89,7 @@ export default function WeeklyReview() {
           <div className="w-full h-3 bg-cream rounded-full overflow-hidden mt-4">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${weekRate}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
+              style={{ width: `${weekRate}%`, background: 'linear-gradient(to right, #A29BFE, #6C5CE7)' }}
             />
           </div>
           <div className="grid grid-cols-3 gap-3 mt-5">
@@ -128,10 +128,10 @@ export default function WeeklyReview() {
                       style={{
                         height: `${height}%`,
                         background: d.rate === 100
-                          ? 'linear-gradient(to top, #2D4A3E, #A8C5B8)'
+                          ? 'linear-gradient(to top, #6C5CE7, #A29BFE)'
                           : d.rate >= 50
-                            ? 'linear-gradient(to top, #A8C5B8, #c3d9cf)'
-                            : 'linear-gradient(to top, #E8985E, #f5c9a3)',
+                            ? 'linear-gradient(to top, #A29BFE, #D5CEF0)'
+                            : 'linear-gradient(to top, #4ECDC4, #B2ECE6)',
                       }}
                     />
                   </div>
@@ -234,10 +234,10 @@ export default function WeeklyReview() {
                   style={{
                     width: `${rate}%`,
                     background: rate >= 80
-                      ? 'linear-gradient(to right, #A8C5B8, #2D4A3E)'
+                      ? 'linear-gradient(to right, #A29BFE, #6C5CE7)'
                       : rate >= 50
-                        ? '#A8C5B8'
-                        : '#E8985E',
+                        ? '#A29BFE'
+                        : '#4ECDC4',
                   }}
                 />
               </div>

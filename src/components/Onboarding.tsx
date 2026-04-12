@@ -76,7 +76,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   return (
     <div
       className="min-h-dvh flex flex-col overflow-hidden"
-      style={{ background: '#F5F5F0' }}
+      style={{ background: '#F0EDF6' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -108,7 +108,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           <button
             onClick={next}
             className="w-full max-w-sm py-4 rounded-full font-semibold text-base transition-all duration-200 cursor-pointer hover:opacity-90 active:scale-[0.98]"
-            style={{ backgroundColor: '#2D4A3E', color: '#fff' }}
+            style={{ backgroundColor: '#6C5CE7', color: '#fff' }}
           >
             Next →
           </button>
@@ -126,7 +126,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           <button
             onClick={onComplete}
             className="w-full max-w-sm py-4 rounded-full font-semibold text-base transition-all duration-200 cursor-pointer hover:opacity-90 active:scale-[0.98]"
-            style={{ backgroundColor: '#fff', color: '#2D4A3E', border: '2px solid #2D4A3E' }}
+            style={{ backgroundColor: '#fff', color: '#6C5CE7', border: '2px solid #6C5CE7' }}
           >
             Get Started →
           </button>
@@ -142,7 +142,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               style={{
                 width: i === currentScreen ? '24px' : '8px',
                 height: '8px',
-                backgroundColor: i === currentScreen ? '#2D4A3E' : '#c3d9cf',
+                backgroundColor: i === currentScreen ? '#6C5CE7' : '#D5CEF0',
               }}
               aria-label={`Go to screen ${i + 1}`}
             />
@@ -164,22 +164,22 @@ function Screen1() {
           {/* Beige circle background */}
           <circle cx="80" cy="80" r="78" fill="#E8DCCC" />
           {/* Stem */}
-          <path d="M80 120 Q80 90 80 65" stroke="#2D4A3E" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d="M80 120 Q80 90 80 65" stroke="#6C5CE7" strokeWidth="3" fill="none" strokeLinecap="round" />
           {/* Left leaf */}
-          <path d="M80 85 Q55 70 50 45 Q70 55 80 75" fill="#5A8F7B" />
-          <path d="M80 85 Q60 72 55 50" stroke="#3D6B5A" strokeWidth="1" fill="none" />
+          <path d="M80 85 Q55 70 50 45 Q70 55 80 75" fill="#8B7FD4" />
+          <path d="M80 85 Q60 72 55 50" stroke="#6C5CE7" strokeWidth="1" fill="none" />
           {/* Right leaf */}
-          <path d="M80 75 Q105 55 115 35 Q95 50 80 65" fill="#7DB8A0" />
-          <path d="M80 75 Q100 58 110 40" stroke="#5A9A80" strokeWidth="1" fill="none" />
+          <path d="M80 75 Q105 55 115 35 Q95 50 80 65" fill="#A29BFE" />
+          <path d="M80 75 Q100 58 110 40" stroke="#8B7FD4" strokeWidth="1" fill="none" />
           {/* Small top leaf */}
-          <path d="M80 65 Q70 50 65 38 Q78 48 80 60" fill="#A8C5B8" />
+          <path d="M80 65 Q70 50 65 38 Q78 48 80 60" fill="#D5CEF0" />
           {/* Soil/base */}
           <ellipse cx="80" cy="120" rx="20" ry="6" fill="#C4A882" />
         </svg>
       </div>
       <h1
         className="text-3xl font-bold mb-3"
-        style={{ color: '#2D4A3E', lineHeight: 1.3 }}
+        style={{ color: '#6C5CE7', lineHeight: 1.3 }}
       >
         Welcome to Streakly
       </h1>
@@ -199,8 +199,8 @@ function Screen2() {
       {/* Decorative element */}
       <div className="mx-auto mb-10" style={{ width: '120px', height: '120px' }}>
         <svg viewBox="0 0 120 120" width="120" height="120">
-          <circle cx="60" cy="60" r="55" fill="none" stroke="#A8C5B8" strokeWidth="1.5" strokeDasharray="6 4" />
-          <circle cx="60" cy="60" r="40" fill="#EAF2ED" />
+          <circle cx="60" cy="60" r="55" fill="none" stroke="#A29BFE" strokeWidth="1.5" strokeDasharray="6 4" />
+          <circle cx="60" cy="60" r="40" fill="#EDE9FC" />
           <text x="60" y="68" textAnchor="middle" fontSize="36">🍃</text>
         </svg>
       </div>
@@ -212,7 +212,7 @@ function Screen2() {
       </h1>
       <p
         className="text-3xl mb-6"
-        style={{ color: '#A8C5B8', fontStyle: 'italic', fontFamily: 'Georgia, "Times New Roman", serif' }}
+        style={{ color: '#A29BFE', fontStyle: 'italic', fontFamily: 'Georgia, "Times New Roman", serif' }}
       >
         rituals
       </p>
@@ -232,13 +232,13 @@ function Screen3() {
       {/* Decorative element */}
       <div className="mx-auto mb-10" style={{ width: '120px', height: '120px' }}>
         <svg viewBox="0 0 120 120" width="120" height="120">
-          <circle cx="60" cy="60" r="55" fill="#EAF2ED" />
+          <circle cx="60" cy="60" r="55" fill="#EDE9FC" />
           {/* Abstract balance symbol */}
-          <line x1="35" y1="60" x2="85" y2="60" stroke="#2D4A3E" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="35" cy="60" r="8" fill="#A8C5B8" />
-          <circle cx="85" cy="60" r="8" fill="#5A8F7B" />
-          <line x1="60" y1="60" x2="60" y2="85" stroke="#2D4A3E" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="60" cy="42" r="5" fill="#2D4A3E" />
+          <line x1="35" y1="60" x2="85" y2="60" stroke="#6C5CE7" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="35" cy="60" r="8" fill="#A29BFE" />
+          <circle cx="85" cy="60" r="8" fill="#8B7FD4" />
+          <line x1="60" y1="60" x2="60" y2="85" stroke="#6C5CE7" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="60" cy="42" r="5" fill="#6C5CE7" />
         </svg>
       </div>
       <h1
