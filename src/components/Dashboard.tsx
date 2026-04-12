@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useHabits } from '../context/HabitContext';
 import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
 import { getGreeting, formatDate } from '../utils/dateHelpers';
@@ -19,9 +19,6 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
   const [showJourneyMenu, setShowJourneyMenu] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const todayRef = useRef<HTMLDivElement>(null);
-
   // Close journey menu when clicking outside
   useEffect(() => {
     if (!showJourneyMenu) return;
@@ -30,24 +27,15 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
     return () => window.removeEventListener('click', handler);
   }, [showJourneyMenu]);
 
-  // Scroll to today on mount
-  useEffect(() => {
-    if (todayRef.current && scrollRef.current) {
-      const container = scrollRef.current;
-      const el = todayRef.current;
-      container.scrollLeft = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
-    }
-  }, []);
-
   const greeting = getGreeting();
   const today = new Date();
   const todayStr = formatDate(today);
   const isViewingToday = selectedDate === todayStr;
 
-  // Generate last 7 days + today (8 dates total)
-  const dates = Array.from({ length: 8 }).map((_, i) => {
+  // Generate 2 days before + today + 2 days after (5 dates total)
+  const dates = Array.from({ length: 5 }).map((_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 7 + i);
+    d.setDate(today.getDate() - 2 + i);
     const dateStr = formatDate(d);
     return {
       label: DAY_LABELS[d.getDay()],
@@ -172,37 +160,21 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
         </section>
       )}
 
-      {/* Scrollable Date Selector */}
+      {/* Date Selector */}
       <section className="px-4 pt-3 pb-1">
-        <div
-          ref={scrollRef}
-          className="flex gap-1 overflow-x-auto pb-2 hide-scrollbar scroll-smooth snap-x snap-mandatory"
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-        >
+        <div className="flex justify-center gap-3">
           {dates.map((d) => (
             <div
               key={d.dateStr}
-              ref={d.isToday ? todayRef : undefined}
               onClick={() => setSelectedDate(d.dateStr)}
-              className={`flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 px-2 py-1.5 rounded-xl snap-center transition-all ${
-                d.isSelected ? 'bg-mint scale-105' : 'opacity-70 hover:opacity-100 active:scale-95'
+              className={`flex flex-col items-center justify-center cursor-pointer transition-all ${
+                d.isSelected
+                  ? 'bg-forest rounded-[2rem] px-4 py-3 shadow-md shadow-forest/20'
+                  : 'bg-cream rounded-2xl px-3 py-2.5 hover:bg-mint active:scale-95'
               }`}
             >
-              <span className="text-[10px] text-muted font-medium">{d.label}</span>
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                  d.isSelected
-                    ? 'bg-forest text-white shadow-md shadow-forest/20'
-                    : d.isToday
-                    ? 'ring-2 ring-forest text-forest'
-                    : 'text-dark hover:bg-mint'
-                }`}
-              >
-                {d.date}
-              </div>
-              {d.isFirstOfMonth && (
-                <span className="text-[9px] text-sage font-semibold">{d.month}</span>
-              )}
+              <span className={`text-xs font-medium ${d.isSelected ? 'text-white/80' : 'text-muted'}`}>{d.label}</span>
+              <span className={`text-lg font-bold mt-0.5 ${d.isSelected ? 'text-white' : 'text-dark'}`}>{d.date}</span>
             </div>
           ))}
         </div>
@@ -228,12 +200,12 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
         </section>
       )}
 
-      {/* Daily Journey Card */}
+      {/* Daily Progress Circle */}
       <section className="px-4 pt-4">
         <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-1">
             <p className="text-xs font-bold text-muted tracking-widest">
-              {isViewingToday ? 'DAILY JOURNEY' : selDateDisplay.toUpperCase()}
+              {isViewingToday ? 'DAILY PROGRESS' : selDateDisplay.toUpperCase()}
             </p>
             <div className="relative">
               <button
@@ -294,17 +266,30 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-4 mb-3">
-            <p className="text-4xl font-bold text-forest">{percent}%</p>
-          </div>
-          <p className="text-sm text-muted mb-3">
-            {displayCompleted} of {displayTotal} Completed
-          </p>
-          <div className="w-full h-2.5 bg-cream rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${percent}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
-            />
+          <div className="flex justify-center py-4">
+            <div className="relative">
+              <svg className="w-48 h-48" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--color-sage-light)" strokeWidth="10" />
+                <circle
+                  cx="60" cy="60" r="52"
+                  fill="none"
+                  stroke="var(--color-forest)"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={326.73}
+                  strokeDashoffset={326.73 * (1 - percent / 100)}
+                  transform="rotate(-90 60 60)"
+                  className="transition-all duration-700"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-sm text-muted font-medium">Daily Progress</p>
+                <p className="text-4xl font-bold text-forest">{percent}%</p>
+                <span className="mt-1 px-3 py-0.5 bg-mint rounded-full text-xs font-semibold text-forest">
+                  {displayCompleted}/{displayTotal} Habits
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
