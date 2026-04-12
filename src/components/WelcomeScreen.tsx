@@ -30,7 +30,7 @@ export default function WelcomeScreen() {
   return (
     <div
       className="min-h-dvh flex flex-col items-center justify-center px-6 text-white animate-fade-in cursor-pointer"
-      style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #A29BFE 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #2D4A3E 0%, #A8C5B8 100%)' }}
       onClick={handleContinue}
     >
       <p className="text-5xl mb-4">{greeting.emoji}</p>

@@ -13,7 +13,7 @@ const EMOJI_OPTIONS = [
 
 const CATEGORIES = ['General', 'Health', 'Fitness', 'Mindfulness', 'Learning', 'Productivity', 'Self-care', 'Social'];
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const COLOR_PALETTE = ['#6C5CE7', '#A29BFE', '#4ECDC4', '#FF6B6B', '#FDA085', '#FDCB58', '#26DE81', '#3B82F6', '#EC4899', '#8B5CF6'];
+export const COLOR_PALETTE = ['#2D4A3E', '#A8C5B8', '#E8985E', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#10B981', '#06B6D4'];
 
 const TEMPLATES: HabitTemplate[] = [
   { name: 'Drink Water', emoji: '💧', category: 'Health', target: '8 glasses', schedule: [0, 1, 2, 3, 4, 5, 6] },

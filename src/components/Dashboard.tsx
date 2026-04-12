@@ -79,17 +79,6 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
     ? 'Today'
     : selDateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-  // Streak stats for stat cards
-  const longestOverall = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
-  const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
-  const level = totalCompletions >= 500 ? 'Master'
-    : totalCompletions >= 200 ? 'Zen Pro'
-    : totalCompletions >= 100 ? 'Dedicated'
-    : totalCompletions >= 60 ? 'Consistent'
-    : totalCompletions >= 30 ? 'Builder'
-    : totalCompletions >= 10 ? 'Starter'
-    : 'Beginner';
-
   // Comeback mode: habits where streak broke and longestStreak > 2
   const comebackHabits = habits.filter(
     (h) => h.currentStreak === 0 && h.longestStreak > 2 && h.completionDates.length > 0 && !h.isCompletedToday
@@ -244,7 +233,7 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
         <div className="bg-white rounded-2xl p-5 shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <p className="text-xs font-bold text-muted tracking-widest">
-              {isViewingToday ? 'DAILY PROGRESS' : selDateDisplay.toUpperCase()}
+              {isViewingToday ? 'DAILY JOURNEY' : selDateDisplay.toUpperCase()}
             </p>
             <div className="relative">
               <button
@@ -305,28 +294,17 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
               )}
             </div>
           </div>
-          <div className="flex justify-center py-3">
-            <div className="relative">
-              <svg className="w-40 h-40" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--color-mint)" strokeWidth="10" />
-                <circle
-                  cx="60" cy="60" r="50"
-                  fill="none"
-                  stroke="var(--color-forest)"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={314.16}
-                  strokeDashoffset={314.16 * (1 - percent / 100)}
-                  transform="rotate(-90 60 60)"
-                  className="transition-all duration-700"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-xs text-muted font-medium">Daily Progress</p>
-                <p className="text-3xl font-bold text-forest">{percent}%</p>
-                <p className="text-xs text-muted">{displayCompleted}/{displayTotal} Habits</p>
-              </div>
-            </div>
+          <div className="flex items-center gap-4 mb-3">
+            <p className="text-4xl font-bold text-forest">{percent}%</p>
+          </div>
+          <p className="text-sm text-muted mb-3">
+            {displayCompleted} of {displayTotal} Completed
+          </p>
+          <div className="w-full h-2.5 bg-cream rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${percent}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
+            />
           </div>
         </div>
       </section>
@@ -357,7 +335,7 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
       <section className="px-4 pt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold text-dark">
-            {isViewingToday ? 'Daily Rituals' : `Habits · ${selDateDisplay}`}
+            {isViewingToday ? "Today's Habits" : `Habits · ${selDateDisplay}`}
           </h2>
           <button
             onClick={onOpenAddHabit}
@@ -446,28 +424,6 @@ export default function Dashboard({ onOpenAddHabit }: DashboardProps) {
           </div>
         )}
       </section>
-
-      {/* Streak Stats Cards */}
-      {isViewingToday && habits.length > 0 && (
-        <section className="px-4 pt-4">
-          <div className="flex gap-3">
-            <div className="flex-1 bg-gradient-to-br from-forest to-forest/80 rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm">🔥</span>
-                <p className="text-[10px] font-bold text-white/70 tracking-widest">LONGEST STREAK</p>
-              </div>
-              <p className="text-2xl font-bold text-white">{longestOverall} Days</p>
-            </div>
-            <div className="flex-1 bg-gradient-to-br from-peach to-peach/80 rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm">🏆</span>
-                <p className="text-[10px] font-bold text-white/70 tracking-widest">LEVEL</p>
-              </div>
-              <p className="text-2xl font-bold text-white">{level}</p>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Free Plan Indicator */}
       {!isPremium && (

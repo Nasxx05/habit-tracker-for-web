@@ -20,7 +20,7 @@ export default function DesktopBlocker() {
       position: 'fixed',
       inset: 0,
       zIndex: 9999,
-      background: 'linear-gradient(135deg, #6C5CE7 0%, #3D2F6B 100%)',
+      background: 'linear-gradient(135deg, #2D4A3E 0%, #1a2e26 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -42,7 +42,7 @@ export default function DesktopBlocker() {
         </h1>
         <p style={{
           fontSize: '1.05rem',
-          color: '#D5CEF0',
+          color: '#A8C5B8',
           lineHeight: 1.6,
           marginBottom: '2rem',
         }}>
@@ -50,12 +50,12 @@ export default function DesktopBlocker() {
           Please open this site on your phone for the best experience.
         </p>
         <div style={{
-          background: 'rgba(162, 155, 254, 0.15)',
+          background: 'rgba(168, 197, 184, 0.15)',
           borderRadius: '1rem',
           padding: '1.25rem',
-          border: '1px solid rgba(162, 155, 254, 0.25)',
+          border: '1px solid rgba(168, 197, 184, 0.25)',
         }}>
-          <p style={{ fontSize: '0.9rem', color: '#D5CEF0', margin: 0, lineHeight: 1.6 }}>
+          <p style={{ fontSize: '0.9rem', color: '#c3d9cf', margin: 0, lineHeight: 1.6 }}>
             Open <strong style={{ color: '#fff' }}>{window.location.hostname}</strong> on your phone's browser to get started.
           </p>
         </div>

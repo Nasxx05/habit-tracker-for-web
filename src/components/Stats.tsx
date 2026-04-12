@@ -129,7 +129,7 @@ export default function Stats() {
                       className="absolute bottom-0 left-0 right-0 rounded-t-lg transition-all duration-500"
                       style={{
                         height: `${height}%`,
-                        background: 'linear-gradient(to top, #6C5CE7, #A29BFE)',
+                        background: 'linear-gradient(to top, #2D4A3E, #A8C5B8)',
                       }}
                     />
                   </div>
@@ -154,7 +154,7 @@ export default function Stats() {
           <div className="w-full h-3 bg-cream rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${monthRate}%`, background: 'linear-gradient(to right, #A29BFE, #6C5CE7)' }}
+              style={{ width: `${monthRate}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
             />
           </div>
           <p className="text-xs text-muted mt-2">
