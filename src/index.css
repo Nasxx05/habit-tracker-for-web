@@ -1,29 +1,93 @@
 @import "tailwindcss";
 
 @theme {
+  /* Surfaces — warm neutrals */
+  --color-bg: #F4F1EA;
+  --color-bg-soft: #EEEAE0;
+  --color-bg-sunken: #E6E1D5;
+  --color-card: #FFFFFF;
+  --color-card-soft: #FBF8F1;
+
+  /* Ink */
+  --color-ink: #1E231F;
+  --color-ink-2: #43493F;
+  --color-ink-3: #6D7268;
+  --color-ink-4: #9AA096;
+
+  /* Brand — evolved sage ladder */
+  --color-sage-50: #EFF3ED;
+  --color-sage-100: #DEE7DA;
+  --color-sage-200: #BDCDB6;
+  --color-sage-300: #9DB491;
+  --color-sage-400: #7A9A70;
+  --color-sage-500: #5D8053;
+  --color-forest: #24402E;
+  --color-forest-ink: #19281E;
+
+  /* Accents */
+  --color-terracotta: oklch(0.68 0.14 45);
+  --color-terracotta-soft: oklch(0.92 0.05 45);
+  --color-plum: oklch(0.55 0.08 340);
+  --color-plum-soft: oklch(0.94 0.03 340);
+  --color-butter: oklch(0.88 0.09 92);
+  --color-ice: oklch(0.88 0.04 220);
+
+  /* Habit palette — 8 hues */
+  --color-h-moss: oklch(0.62 0.09 140);
+  --color-h-sage: oklch(0.68 0.08 155);
+  --color-h-ocean: oklch(0.58 0.09 220);
+  --color-h-sky: oklch(0.70 0.08 235);
+  --color-h-plum: oklch(0.55 0.09 340);
+  --color-h-rose: oklch(0.70 0.09 20);
+  --color-h-clay: oklch(0.65 0.10 50);
+  --color-h-wheat: oklch(0.72 0.08 85);
+
+  /* Semantic */
+  --color-ok: #5D8053;
+  --color-warn: oklch(0.70 0.12 75);
+  --color-bad: oklch(0.62 0.14 25);
+
+  /* Legacy aliases for components not yet fully migrated */
   --color-sage: #A8C5B8;
   --color-sage-light: #c3d9cf;
-  --color-forest: #2D4A3E;
-  --color-mint: #EAF2ED;
-  --color-cream: #F5F5F0;
-  --color-dark: #2C2C2C;
-  --color-muted: #8A8A8A;
-  --color-peach: #E8985E;
-  --color-peach-light: #f5c9a3;
+  --color-mint: #EFF3ED;
+  --color-cream: #F4F1EA;
+  --color-dark: #1E231F;
+  --color-muted: #9AA096;
+  --color-peach: oklch(0.68 0.14 45);
+  --color-peach-light: oklch(0.92 0.05 45);
 }
 
-/* Dark mode — overrides theme CSS variables so all utilities recolor automatically */
+/* Dark mode */
 html.dark {
-  --color-cream: #0f1419;
-  --color-mint: #1f2a26;
-  --color-sage-light: #2d3a35;
-  --color-sage: #5b8074;
-  --color-forest: #A8C5B8;
-  --color-dark: #e8e8e8;
-  --color-muted: #9aa0a6;
-  --color-white: #1a1f24;
+  --color-bg: #141814;
+  --color-bg-soft: #1A1F1A;
+  --color-bg-sunken: #11140F;
+  --color-card: #1F2521;
+  --color-card-soft: #1A1F1A;
+
+  --color-ink: #ECE9DF;
+  --color-ink-2: #C8C5BA;
+  --color-ink-3: #8F8C82;
+  --color-ink-4: #65665E;
+
+  --color-sage-50: #1F2521;
+  --color-sage-100: #26302A;
+  --color-sage-200: #324038;
+  --color-sage-300: #557062;
+  --color-sage-400: #7B9A87;
+  --color-sage-500: #9DB9A6;
+  --color-forest: #D4E4D2;
+  --color-forest-ink: #E8F0E4;
+
+  --color-cream: #141814;
+  --color-mint: #1F2521;
+  --color-sage-light: #26302A;
+  --color-sage: #7B9A87;
+  --color-dark: #ECE9DF;
+  --color-muted: #8F8C82;
 }
-html.dark body { background-color: #0f1419; color: #e8e8e8; }
+html.dark body { background-color: #141814; color: #ECE9DF; }
 
 @layer base {
   *,
@@ -34,20 +98,56 @@ html.dark body { background-color: #0f1419; color: #e8e8e8; }
 
   body {
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #F5F5F0;
-    color: #2C2C2C;
+    background-color: var(--color-bg);
+    color: var(--color-ink);
     min-height: 100dvh;
+    letter-spacing: -0.005em;
     transition: background-color 0.3s, color 0.3s;
   }
 
   #root {
     min-height: 100dvh;
   }
-
 }
+
+/* Typography utilities */
+.font-serif {
+  font-family: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rule / separator */
+.rule {
+  border-color: rgba(30,35,31,.08);
+}
+.rule-2 {
+  border-color: rgba(30,35,31,.14);
+}
+html.dark .rule { border-color: rgba(236,233,223,.09); }
+html.dark .rule-2 { border-color: rgba(236,233,223,.16); }
+
+/* Elevation */
+.elevation-1 {
+  box-shadow: 0 1px 2px rgba(30,35,31,.04), 0 1px 1px rgba(30,35,31,.03);
+}
+.elevation-2 {
+  box-shadow: 0 2px 6px rgba(30,35,31,.05), 0 8px 24px rgba(30,35,31,.05);
+}
+html.dark .elevation-1 { box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+html.dark .elevation-2 { box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.35); }
 
 /* Custom animations */
 @keyframes fade-in {
@@ -131,6 +231,8 @@ html.dark body { background-color: #0f1419; color: #e8e8e8; }
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
 
 /* Snap scrolling */
 .snap-x {

@@ -1,77 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHabits } from '../context/HabitContext';
 import { usePremium } from '../context/PremiumContext';
-import {
-  getDaysInMonth,
-  getFirstDayOfMonth,
-  getMonthName,
-  formatDate,
-  getToday,
-} from '../utils/dateHelpers';
+import { formatDate, getToday } from '../utils/dateHelpers';
 import EditHabitModal from './EditHabitModal';
-import HabitAnalytics from './HabitAnalytics';
 import ShareCardModal from './ShareCardModal';
 import UpgradeModal from './UpgradeModal';
+import HabitGlyph, { getGlyphForHabit } from './HabitGlyph';
+import { Heatmap, Sparkline } from './DataViz';
+import { IconChevronL, IconShare, IconMore, IconEdit, IconTrending } from './Icons';
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-function getInsights(habit: { name: string; currentStreak: number; longestStreak: number; completionDates: string[] }) {
-  const insights: { icon: string; title: string; body: string }[] = [];
-  const dates = habit.completionDates;
-
-  const dayCounts = [0, 0, 0, 0, 0, 0, 0];
-  const dayTotal = [0, 0, 0, 0, 0, 0, 0];
-  const now = new Date();
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dow = d.getDay();
-    dayTotal[dow]++;
-    if (dates.includes(formatDate(d))) dayCounts[dow]++;
-  }
-  const dayNames = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
-  let worstDay = 0;
-  let worstRate = 1;
-  dayTotal.forEach((total, i) => {
-    if (total > 0) {
-      const rate = dayCounts[i] / total;
-      if (rate < worstRate) { worstRate = rate; worstDay = i; }
-    }
-  });
-  if (worstRate < 0.5 && dayTotal[worstDay] >= 2) {
-    insights.push({ icon: '📈', title: 'Consistency Tip', body: `You tend to miss this habit on ${dayNames[worstDay]}. Try setting a reminder earlier on those days.` });
-  }
-
-  const nextMilestones = [7, 14, 30, 60, 100];
-  for (const milestone of nextMilestones) {
-    if (habit.currentStreak > 0 && habit.currentStreak < milestone) {
-      const remaining = milestone - habit.currentStreak;
-      if (remaining <= 5) {
-        insights.push({ icon: '🎯', title: 'Next Milestone', body: `You're ${remaining} day${remaining === 1 ? '' : 's'} away from a ${milestone}-day streak! Keep going.` });
-      }
-      break;
-    }
-  }
-
-  if (habit.longestStreak >= 3) {
-    insights.push({ icon: '⏰', title: 'Optimal Time', body: `Your longest streaks happen when you stay consistent. Try completing "${habit.name}" at the same time each day.` });
-  }
-
-  if (insights.length === 0) {
-    insights.push({ icon: '💡', title: 'Getting Started', body: `Start building momentum with "${habit.name}". Even one day completed is a great start!` });
-  }
-
-  return insights.slice(0, 3);
+function StatBlock({ label, value, unit, accent }: { label: string; value: number; unit: string; accent?: boolean }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--color-ink-4)' }}>{label}</div>
+      <div className="tnum" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.6, color: accent ? 'var(--color-terracotta)' : 'var(--color-ink)', marginTop: 3 }}>{value}</div>
+      <div style={{ fontSize: 10, color: 'var(--color-ink-3)', fontWeight: 500, marginTop: -2 }}>{unit}</div>
+    </div>
+  );
 }
 
 export default function HabitDetail() {
   const { habits, selectedHabitId, setCurrentView, reflections, addReflection, toggleHabit, toggleSkipDay } = useHabits();
   const { isPremium, freezesLeft } = usePremium();
-  const habit = habits.find((h) => h.id === selectedHabitId);
+  const habit = habits.find(h => h.id === selectedHabitId);
 
-  const today = new Date();
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [viewYear, setViewYear] = useState(today.getFullYear());
   const [showMenu, setShowMenu] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -81,10 +33,7 @@ export default function HabitDetail() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const todayStr = getToday();
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
 
-  // Auto-save reflection — fixed: don't clear text immediately
   useEffect(() => {
     if (!reflectionText.trim() || !habit) return;
     setSaveStatus('saving');
@@ -92,227 +41,195 @@ export default function HabitDetail() {
     saveTimerRef.current = setTimeout(() => {
       addReflection(habit.id, reflectionText.trim());
       setSaveStatus('saved');
-      // Keep text visible for 2s then clear
-      saveTimerRef.current = setTimeout(() => {
-        setReflectionText('');
-        setSaveStatus('idle');
-      }, 2000);
+      saveTimerRef.current = setTimeout(() => { setReflectionText(''); setSaveStatus('idle'); }, 2000);
     }, 2000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [reflectionText, habit, addReflection]);
 
   if (!habit) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-muted">Habit not found</p>
-        <button onClick={() => setCurrentView('home')} className="mt-4 text-forest font-semibold cursor-pointer">Go back</button>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px' }}>
+        <p style={{ color: 'var(--color-ink-3)', margin: '0 0 16px' }}>Habit not found</p>
+        <button onClick={() => setCurrentView('home')} style={{ color: 'var(--color-forest)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Go back</button>
       </div>
     );
   }
 
-  const habitReflections = reflections.filter((r) => r.habitId === habit.id).slice(0, 5);
-  const insights = getInsights(habit);
-  const totalDays = habit.completionDates.length;
+  const { shape, color } = getGlyphForHabit(habit.emoji, habit.category, habit.glyphShape, habit.glyphColor);
   const skipDates = habit.skipDates || [];
   const isSkippedToday = skipDates.includes(todayStr);
+  const habitReflections = reflections.filter(r => r.habitId === habit.id).slice(0, 3);
 
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); }
-    else setViewMonth(viewMonth - 1);
-  };
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); }
-    else setViewMonth(viewMonth + 1);
-  };
+  // 8-week weekly rollup for sparkline
+  const weekly: number[] = [];
+  const set = new Set(habit.completionDates);
+  for (let w = 7; w >= 0; w--) {
+    let c = 0;
+    for (let d = 0; d < 7; d++) {
+      const day = new Date();
+      day.setDate(day.getDate() - (w * 7 + d));
+      if (set.has(formatDate(day))) c++;
+    }
+    weekly.push(c);
+  }
+
+  const daysSinceCreated = Math.max(1, Math.ceil((Date.now() - new Date(habit.createdAt).getTime()) / 86400000));
+  const completionRate = Math.min(100, Math.round((habit.completionDates.length / daysSinceCreated) * 100));
 
   return (
-    <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
-      {/* Top Bar */}
-      <div className="sticky top-0 bg-cream/90 backdrop-blur-md z-10 px-4 py-3 flex items-center justify-between">
-        <button onClick={() => setCurrentView('home')}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-mint transition text-dark text-lg cursor-pointer">←</button>
-        <h1 className="text-lg font-bold text-dark">{habit.emoji} {habit.name}</h1>
-        <div className="relative">
-          <button onClick={() => setShowMenu(!showMenu)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-mint transition text-muted cursor-pointer">⋯</button>
-          {showMenu && (
-            <div className="absolute right-0 top-12 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-48 animate-fade-in z-20">
-              <button onClick={() => { setShowMenu(false); setShowEdit(true); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">Edit Habit</button>
-              <button onClick={() => { toggleHabit(habit.id); setShowMenu(false); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                {habit.isCompletedToday ? 'Undo Today' : 'Complete Today'}
-              </button>
-              <button onClick={() => { toggleSkipDay(habit.id, todayStr); setShowMenu(false); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                {isSkippedToday ? 'Remove Skip' : 'Skip Today (Rest Day)'}
-              </button>
-              <button onClick={() => { setShowMenu(false); if (isPremium) setShowShare(true); else setShowShareUpgrade(true); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                Share Progress {!isPremium && <span className="text-xs text-muted">· Premium</span>}
-              </button>
-              <div className="border-t border-gray-100 my-1" />
-              {isPremium ? (
-                <div className="px-4 py-2.5 text-sm text-dark flex items-center justify-between">
-                  <span>Streak Freeze</span>
-                  <span className="text-xs font-semibold text-blue-500">🧊 {freezesLeft} left</span>
-                </div>
-              ) : (
-                <button onClick={() => { setShowMenu(false); setShowShareUpgrade(true); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-dark hover:bg-mint transition cursor-pointer">
-                  Streak Freeze <span className="text-xs text-muted">· Premium</span>
+    <div className="max-w-3xl mx-auto pb-28 animate-fade-in" style={{ background: 'var(--color-bg)', minHeight: '100dvh' }}>
+
+      {/* Top bar */}
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'color-mix(in oklch, var(--color-bg) 90%, transparent)', backdropFilter: 'blur(16px)', zIndex: 10 }}>
+        <button onClick={() => setCurrentView('home')} style={{ background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', width: 36, height: 36, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-ink-2)' }}>
+          <IconChevronL size={18} />
+        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => { if (isPremium) setShowShare(true); else setShowShareUpgrade(true); }} style={{ background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', width: 36, height: 36, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-ink-2)' }}>
+            <IconShare size={16} />
+          </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setShowMenu(!showMenu)} style={{ background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', width: 36, height: 36, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-ink-2)' }}>
+              <IconMore size={16} />
+            </button>
+            {showMenu && (
+              <div style={{ position: 'absolute', right: 0, top: 42, background: 'var(--color-card)', borderRadius: 14, boxShadow: '0 2px 6px rgba(30,35,31,.05), 0 8px 24px rgba(30,35,31,.05)', border: '1px solid rgba(30,35,31,.08)', padding: '4px 0', zIndex: 50, minWidth: 200 }}>
+                <button onClick={() => { setShowMenu(false); setShowEdit(true); }} style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: 13, color: 'var(--color-ink)', background: 'none', border: 'none', cursor: 'pointer' }}>Edit Habit</button>
+                <button onClick={() => { toggleHabit(habit.id); setShowMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: 13, color: 'var(--color-ink)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  {habit.isCompletedToday ? 'Undo Today' : 'Complete Today'}
                 </button>
-              )}
-            </div>
-          )}
+                <button onClick={() => { toggleSkipDay(habit.id, todayStr); setShowMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: 13, color: 'var(--color-ink)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  {isSkippedToday ? 'Remove Skip' : 'Skip Today (Rest Day)'}
+                </button>
+                <div style={{ height: 1, background: 'rgba(30,35,31,.08)', margin: '4px 0' }} />
+                <div style={{ padding: '10px 16px', fontSize: 13, color: 'var(--color-ink-2)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Streak Freeze</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: isPremium ? 'var(--color-ice)' : 'var(--color-ink-4)' }}>
+                    {isPremium ? `🧊 ${freezesLeft} left` : '· Premium'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Skip Day Banner */}
+      {/* Hero */}
+      <div style={{ padding: '8px 20px 20px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <HabitGlyph shape={shape} color={color} size={60} />
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--color-ink-3)', letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>{habit.category} · {habit.target || 'daily'}</div>
+          <div className="font-serif" style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.6, color: 'var(--color-ink)', marginTop: 2 }}>{habit.name}</div>
+        </div>
+      </div>
+
+      {/* Skip banner */}
       {isSkippedToday && (
-        <div className="mx-4 mt-2 px-4 py-3 bg-peach-light rounded-2xl flex items-center gap-2">
+        <div style={{ margin: '0 16px 14px', padding: '12px 16px', borderRadius: 14, background: 'var(--color-butter)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>💤</span>
-          <span className="text-sm font-medium text-dark">Today is a rest day — your streak is safe!</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>Today is a rest day — streak is safe!</span>
         </div>
       )}
 
-      {/* Activity Calendar */}
-      <section className="px-4 pt-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-bold text-muted tracking-widest">ACTIVITY</h2>
-          <div className="flex items-center gap-2">
-            <button onClick={prevMonth} className="text-muted hover:text-dark transition cursor-pointer px-2">←</button>
-            <span className="text-sm font-semibold text-dark bg-mint px-3 py-1 rounded-full">
-              {getMonthName(viewMonth)} {viewYear}
-            </span>
-            <button onClick={nextMonth} className="text-muted hover:text-dark transition cursor-pointer px-2">→</button>
+      {/* Stat trio */}
+      <div style={{ margin: '0 16px 14px', background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', borderRadius: 20, padding: 16, boxShadow: '0 1px 2px rgba(30,35,31,.04)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr 1px 1fr', alignItems: 'center', gap: 12 }}>
+          <StatBlock label="Current" value={habit.currentStreak} unit="days" accent />
+          <div style={{ background: 'rgba(30,35,31,.08)', width: 1, height: 36, justifySelf: 'center' }} />
+          <StatBlock label="Longest" value={habit.longestStreak} unit="days" />
+          <div style={{ background: 'rgba(30,35,31,.08)', width: 1, height: 36, justifySelf: 'center' }} />
+          <StatBlock label="Total" value={habit.completionDates.length} unit="done" />
+        </div>
+      </div>
+
+      {/* 17-week heatmap */}
+      <div style={{ margin: '0 16px 14px', background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', borderRadius: 20, padding: 18, boxShadow: '0 1px 2px rgba(30,35,31,.04)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)' }}>Last 17 weeks</div>
+            <div className="tnum" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', marginTop: 2 }}>
+              {habit.completionDates.length} completions <span style={{ fontWeight: 500, color: 'var(--color-ink-3)' }}>· {completionRate}% rate</span>
+            </div>
           </div>
         </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {WEEKDAYS.map((d, i) => (
-              <div key={i} className="text-center text-xs font-semibold text-muted py-1">{d}</div>
-            ))}
+        <div style={{ overflowX: 'auto' }} className="no-scrollbar">
+          <Heatmap completedDates={habit.completionDates} weeks={17} cell={12} gap={3} color={color} empty="var(--color-sage-100)" />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 10, fontSize: 10, color: 'var(--color-ink-4)', fontWeight: 600 }}>
+          Less
+          <div style={{ display: 'flex', gap: 2 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--color-sage-100)' }} />
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: `color-mix(in oklch, ${color} 40%, var(--color-sage-100))` }} />
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: `color-mix(in oklch, ${color} 70%, var(--color-sage-100))` }} />
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`e-${i}`} className="aspect-square" />
-            ))}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const dateStr = formatDate(new Date(viewYear, viewMonth, day));
-              const isFuture = dateStr > todayStr;
-              const isToday = dateStr === todayStr;
-              const completed = habit.completionDates.includes(dateStr);
-              const skipped = skipDates.includes(dateStr);
+          More
+        </div>
+      </div>
 
-              return (
-                <div key={day}
-                  className={`aspect-square rounded-full flex items-center justify-center text-xs font-medium transition ${
-                    skipped ? 'bg-peach-light text-peach'
-                    : completed ? 'bg-sage text-white'
-                    : isToday ? 'border-2 border-sage text-forest'
-                    : isFuture ? 'text-gray-300'
-                    : 'text-muted'
-                  }`}
-                >{day}</div>
-              );
-            })}
+      {/* 8-week sparkline */}
+      <div style={{ margin: '0 16px 14px', background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', borderRadius: 20, padding: 18, boxShadow: '0 1px 2px rgba(30,35,31,.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)' }}>8-week trend</div>
+            <div className="tnum" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', marginTop: 2 }}>
+              Avg {(weekly.reduce((a, b) => a + b, 0) / weekly.length).toFixed(1)} days/week
+            </div>
           </div>
-          {/* Legend */}
-          <div className="flex gap-4 mt-3 justify-center text-xs text-muted">
-            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-sage" /><span>Done</span></div>
-            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-peach-light" /><span>Rest</span></div>
-            <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full border border-gray-300" /><span>Missed</span></div>
+          <div style={{ fontSize: 11, color: 'var(--color-sage-500)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <IconTrending size={12} />Tracking
           </div>
         </div>
-      </section>
+        <Sparkline values={weekly} width={Math.min(window.innerWidth - 68, 400)} height={72} color={color} fill={`color-mix(in oklch, ${color} 20%, transparent)`} />
+      </div>
 
-      {/* Streak Stats */}
-      <section className="px-4 pt-6">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-            <p className="text-2xl font-bold text-forest">{habit.currentStreak}</p>
-            <p className="text-xs font-bold text-muted tracking-widest mt-1">CURRENT</p>
-            <p className="text-xs text-muted">Streak</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-            <p className="text-2xl font-bold text-peach">{habit.longestStreak}</p>
-            <p className="text-xs font-bold text-muted tracking-widest mt-1">LONGEST</p>
-            <p className="text-xs text-muted">Streak</p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm text-center">
-            <p className="text-2xl font-bold text-forest">{totalDays}</p>
-            <p className="text-xs font-bold text-muted tracking-widest mt-1">TOTAL</p>
-            <p className="text-xs text-muted">Days</p>
-          </div>
-        </div>
-      </section>
+      {/* Reflection */}
+      <div style={{ margin: '0 16px 14px', padding: '18px 20px', borderRadius: 20, background: 'var(--color-forest)', color: '#F5F2E8' }}>
+        {habitReflections.length > 0 && (
+          <>
+            <div style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 700, opacity: .7 }}>
+              Latest reflection
+            </div>
+            <div className="font-serif" style={{ fontSize: 16, lineHeight: 1.5, marginTop: 8, fontWeight: 400, letterSpacing: -0.2 }}>
+              "{habitReflections[0].text}"
+            </div>
+            <div style={{ marginTop: 10, fontSize: 11, opacity: .65 }}>
+              {new Date(habitReflections[0].createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {habitReflections.length} reflection{habitReflections.length !== 1 ? 's' : ''} total
+            </div>
+          </>
+        )}
+        {habitReflections.length === 0 && (
+          <div style={{ fontSize: 13, opacity: .7, fontStyle: 'italic' }}>No reflections yet. Add one below.</div>
+        )}
+      </div>
 
-      {/* Daily Reflection — fixed auto-save */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">DAILY REFLECTION</h2>
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+      {/* Write reflection */}
+      <div style={{ padding: '0 16px 20px' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)', marginBottom: 8 }}>Daily Reflection</div>
+        <div style={{ background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', borderRadius: 16, overflow: 'hidden' }}>
           <textarea
             value={reflectionText}
-            onChange={(e) => setReflectionText(e.target.value)}
-            placeholder="How did your mind feel today? Breathe, and jot down a quick thought..."
-            className="w-full resize-none border-0 outline-none text-sm text-dark placeholder:text-sage-light min-h-[80px] bg-transparent"
+            onChange={e => setReflectionText(e.target.value)}
+            placeholder={`How did "${habit.name}" go today?`}
+            rows={3}
+            style={{
+              width: '100%', padding: '14px 16px', background: 'none', border: 'none', outline: 'none', resize: 'none',
+              fontFamily: 'inherit', fontSize: 14, color: 'var(--color-ink)', lineHeight: 1.5,
+            }}
           />
-          <p className="text-xs text-muted mt-1">
-            {saveStatus === 'saving' && 'Auto-saving ···'}
-            {saveStatus === 'saved' && '✓ Saved — clearing soon'}
-          </p>
-        </div>
-      </section>
-
-      {/* Improvement Insights */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">IMPROVEMENT INSIGHTS</h2>
-        <div className="space-y-3">
-          {insights.map((insight, i) => (
-            <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-mint">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">{insight.icon}</span>
-                <div>
-                  <p className="font-semibold text-dark text-sm">{insight.title}</p>
-                  <p className="text-muted text-sm mt-1">{insight.body}</p>
-                </div>
-              </div>
+          {saveStatus !== 'idle' && (
+            <div style={{ padding: '6px 16px 10px', fontSize: 11, color: 'var(--color-ink-3)', fontWeight: 600 }}>
+              {saveStatus === 'saving' ? 'Saving…' : '✓ Saved'}
             </div>
-          ))}
+          )}
         </div>
-      </section>
+        <button onClick={() => { setShowEdit(true); }} style={{ marginTop: 10, width: '100%', padding: '12px', background: 'var(--color-sage-50)', color: 'var(--color-forest)', fontWeight: 700, fontSize: 13, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <IconEdit size={14} />Edit habit settings
+        </button>
+      </div>
 
-      {/* Recent Reflections */}
-      {habitReflections.length > 0 && (
-        <section className="px-4 pt-6">
-          <h2 className="text-xs font-bold text-muted tracking-widest mb-3">RECENT REFLECTIONS</h2>
-          <div className="space-y-3">
-            {habitReflections.map((r) => {
-              const date = new Date(r.createdAt);
-              const monthShort = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
-              const dayNum = date.getDate();
-              return (
-                <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-peach" />
-                    <span className="text-xs font-bold text-muted">{monthShort} {dayNum}</span>
-                    <span className="ml-auto text-lg">{habit.emoji}</span>
-                  </div>
-                  <p className="text-sm text-dark leading-relaxed">{r.text}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <HabitAnalytics habit={habit} onUpgrade={() => setShowShareUpgrade(true)} />
-
-      <EditHabitModal habit={habit} isOpen={showEdit} onClose={() => setShowEdit(false)} />
-      <ShareCardModal habit={habit} isOpen={showShare} onClose={() => setShowShare(false)} />
+      <EditHabitModal isOpen={showEdit} onClose={() => setShowEdit(false)} habit={habit} />
+      <ShareCardModal isOpen={showShare} onClose={() => setShowShare(false)} habit={habit} />
       <UpgradeModal isOpen={showShareUpgrade} onClose={() => setShowShareUpgrade(false)} />
     </div>
   );

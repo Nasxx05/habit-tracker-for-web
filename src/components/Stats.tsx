@@ -1,187 +1,196 @@
 import { useHabits } from '../context/HabitContext';
-import { getToday, formatDate, getMonthName } from '../utils/dateHelpers';
-import HeatmapChart from './HeatmapChart';
+import { formatDate } from '../utils/dateHelpers';
+import { BarRow, Sparkline } from './DataViz';
+import HabitGlyph, { getGlyphForHabit } from './HabitGlyph';
+import { IconTrending, IconFlame, IconSparkle } from './Icons';
+
+function KPI({ label, value, unit, delta, up, accent }: { label: string; value: string | number; unit?: string; delta?: string; up?: boolean; accent?: boolean }) {
+  return (
+    <div style={{ padding: '14px 14px 12px', background: 'var(--color-card)', borderRadius: 16, border: '1px solid rgba(30,35,31,.08)', boxShadow: '0 1px 2px rgba(30,35,31,.04)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)' }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
+        <span className="tnum" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.6, color: accent ? 'var(--color-terracotta)' : 'var(--color-ink)' }}>{value}</span>
+        {unit && <span style={{ fontSize: 11, color: 'var(--color-ink-3)' }}>{unit}</span>}
+      </div>
+      {delta && (
+        <div style={{ fontSize: 10, color: up ? 'var(--color-sage-500)' : 'var(--color-ink-3)', fontWeight: 600, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3 }} className="tnum">
+          {up && <IconTrending size={10} />}{delta}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Stats() {
   const { habits, setCurrentView } = useHabits();
-  const todayStr = getToday();
 
-  // Empty state
   if (habits.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
-        <div className="px-4 py-4">
-          <h1 className="text-2xl font-bold text-dark">Statistics</h1>
-          <p className="text-muted text-sm mt-1">Your habit tracking overview</p>
+      <div className="max-w-3xl mx-auto pb-28 animate-fade-in" style={{ background: 'var(--color-bg)', minHeight: '100dvh' }}>
+        <div style={{ padding: '12px 20px 6px' }}>
+          <div style={{ fontSize: 11, color: 'var(--color-ink-3)', letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</div>
+          <div className="font-serif" style={{ fontSize: 26, fontWeight: 600, letterSpacing: -0.5, marginTop: 2, color: 'var(--color-ink)' }}>Your rhythm</div>
         </div>
-        <div className="px-4">
-          <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
-            <p className="text-5xl mb-3">📊</p>
-            <h3 className="text-lg font-bold text-dark mb-1">No stats yet</h3>
-            <p className="text-muted text-sm mb-5">Create some habits and start tracking to see your statistics here.</p>
-            <button
-              onClick={() => setCurrentView('home')}
-              className="bg-forest text-white font-semibold px-6 py-3 rounded-full hover:bg-forest/90 transition cursor-pointer"
-            >
-              Go to Dashboard
-            </button>
+        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 20, background: 'var(--color-sage-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <IconSparkle size={28} style={{ color: 'var(--color-forest)' }} />
           </div>
+          <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: 'var(--color-ink)' }}>No stats yet</h3>
+          <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--color-ink-3)' }}>Start tracking habits to see your statistics.</p>
+          <button onClick={() => setCurrentView('home')}
+            style={{ background: 'var(--color-forest)', color: '#F5F2E8', fontWeight: 700, padding: '12px 24px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 14 }}>
+            Go to Dashboard
+          </button>
         </div>
       </div>
     );
   }
 
-  const totalCompletions = habits.reduce((sum, h) => sum + h.completionDates.length, 0);
+  const totalCompletions = habits.reduce((s, h) => s + h.completionDates.length, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.longestStreak), 0);
-  const activeStreaks = habits.filter((h) => h.currentStreak > 0).length;
+  const activeStreaks = habits.filter(h => h.currentStreak > 0).length;
 
-  // Last 7 days — schedule-aware
-  const last7 = Array.from({ length: 7 }).map((_, i) => {
+  // 30-day completion ratios
+  const daily30: Array<{ value: number; color?: string }> = [];
+  for (let i = 29; i >= 0; i--) {
     const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dateStr = formatDate(d);
-    const dow = d.getDay();
-    const scheduled = habits.filter((h) => h.schedule.includes(dow));
-    const completed = scheduled.filter((h) => h.completionDates.includes(dateStr)).length;
-    return {
-      day: d.toLocaleString('en-US', { weekday: 'short' }),
-      completed,
-      total: scheduled.length,
-      isFuture: dateStr > todayStr,
-    };
-  });
+    d.setDate(d.getDate() - i);
+    const k = formatDate(d);
+    const sched = habits.filter(h => h.schedule.includes(d.getDay()));
+    const done = sched.filter(h => h.completionDates.includes(k)).length;
+    daily30.push({ value: sched.length ? (done / sched.length) * 100 : 0 });
+  }
 
-  // This month stats — schedule-aware
+  // Current month stats
   const now = new Date();
-  const thisMonth = now.getMonth();
-  const thisYear = now.getFullYear();
   let monthCompletions = 0;
   let monthPossible = 0;
   let perfectDays = 0;
-
-  for (let day = 1; day <= now.getDate(); day++) {
-    const d = new Date(thisYear, thisMonth, day);
-    const dateStr = formatDate(d);
-    const dow = d.getDay();
-    const scheduled = habits.filter((h) => h.schedule.includes(dow));
-    const completedCount = scheduled.filter((h) => h.completionDates.includes(dateStr)).length;
-    monthCompletions += completedCount;
-    monthPossible += scheduled.length;
-    if (scheduled.length > 0 && completedCount === scheduled.length) perfectDays++;
+  const daysInCurMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  for (let day = 1; day <= Math.min(daysInCurMonth, now.getDate()); day++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), day);
+    const k = formatDate(d);
+    const sched = habits.filter(h => h.schedule.includes(d.getDay()));
+    const done = sched.filter(h => h.completionDates.includes(k)).length;
+    monthCompletions += done;
+    monthPossible += sched.length;
+    if (done === sched.length && sched.length > 0) perfectDays++;
   }
   const monthRate = monthPossible > 0 ? Math.round((monthCompletions / monthPossible) * 100) : 0;
 
-  const maxBar = Math.max(...last7.map((d) => d.total), 1);
+  // Weekly rollup helper
+  function weeklyRollup(h: typeof habits[0]) {
+    const set = new Set(h.completionDates);
+    const out: number[] = [];
+    for (let w = 7; w >= 0; w--) {
+      let c = 0;
+      for (let d = 0; d < 7; d++) {
+        const day = new Date();
+        day.setDate(day.getDate() - (w * 7 + d));
+        if (set.has(formatDate(day))) c++;
+      }
+      out.push(c);
+    }
+    return out;
+  }
+
+  const topHabits = [...habits].sort((a, b) => b.currentStreak - a.currentStreak).slice(0, 5);
 
   return (
-    <div className="max-w-3xl mx-auto pb-24 animate-fade-in">
-      <div className="px-4 py-4">
-        <h1 className="text-2xl font-bold text-dark">Statistics</h1>
-        <p className="text-muted text-sm mt-1">Your habit tracking overview</p>
+    <div className="max-w-3xl mx-auto pb-28 animate-fade-in" style={{ background: 'var(--color-bg)', minHeight: '100dvh' }}>
+
+      {/* Header */}
+      <div style={{ padding: '12px 20px 6px' }}>
+        <div style={{ fontSize: 11, color: 'var(--color-ink-3)', letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Stats</div>
+        <div className="font-serif" style={{ fontSize: 26, fontWeight: 600, letterSpacing: -0.5, marginTop: 2, color: 'var(--color-ink)' }}>Your rhythm</div>
       </div>
 
-      {/* Overview Cards */}
-      <section className="px-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-xs font-bold text-muted tracking-widest">TOTAL</p>
-            <p className="text-3xl font-bold text-forest mt-1">{totalCompletions}</p>
-            <p className="text-xs text-muted mt-1">Completions</p>
+      {/* KPI grid */}
+      <div style={{ padding: '12px 16px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <KPI label="Completions" value={totalCompletions} delta="all time" />
+        <KPI label="Perfect days" value={perfectDays} delta="this month" up />
+        <KPI label="Longest streak" value={bestStreak} unit="days" accent />
+        <KPI label="Active streaks" value={activeStreaks} delta={`of ${habits.length} habits`} up={activeStreaks > 0} />
+      </div>
+
+      {/* 30-day bars */}
+      <div style={{ margin: '0 16px 14px', padding: 16, background: 'var(--color-card)', borderRadius: 18, border: '1px solid rgba(30,35,31,.08)', boxShadow: '0 1px 2px rgba(30,35,31,.04)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)' }}>Daily completion</div>
+            <div className="tnum" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ink)', marginTop: 2 }}>30 days</div>
           </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-xs font-bold text-muted tracking-widest">BEST</p>
-            <p className="text-3xl font-bold text-peach mt-1">{bestStreak}</p>
-            <p className="text-xs text-muted mt-1">Day streak</p>
-          </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-xs font-bold text-muted tracking-widest">ACTIVE</p>
-            <p className="text-3xl font-bold text-forest mt-1">{activeStreaks}</p>
-            <p className="text-xs text-muted mt-1">Streaks now</p>
-          </div>
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-xs font-bold text-muted tracking-widest">PERFECT</p>
-            <p className="text-3xl font-bold text-forest mt-1">{perfectDays}</p>
-            <p className="text-xs text-muted mt-1">Days this month</p>
+          <div style={{ fontSize: 11, color: 'var(--color-sage-500)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <IconTrending size={12} />{monthRate}% this month
           </div>
         </div>
-      </section>
-
-      {/* Weekly Trend */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">WEEKLY TREND</h2>
-        <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <HeatmapChart habits={habits} todayStr={todayStr} />
+        <BarRow values={daily30} width={Math.min(window.innerWidth - 64, 460)} height={72} color="var(--color-forest)" barWidth={6} />
+        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--color-ink-4)', fontWeight: 600, letterSpacing: '.08em' }}>
+          <span>30 days ago</span><span>15 days ago</span><span>Today</span>
         </div>
-      </section>
+      </div>
 
-      {/* Weekly Chart */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">LAST 7 DAYS</h2>
-        <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <div className="flex items-end justify-between gap-2 h-32">
-            {last7.map((d, i) => {
-              const height = maxBar > 0 ? (d.completed / maxBar) * 100 : 0;
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs font-semibold text-dark">{d.completed}</span>
-                  <div className="w-full bg-cream rounded-t-lg relative" style={{ height: '80px' }}>
-                    <div
-                      className="absolute bottom-0 left-0 right-0 rounded-t-lg transition-all duration-500"
-                      style={{
-                        height: `${height}%`,
-                        background: 'linear-gradient(to top, #2D4A3E, #A8C5B8)',
-                      }}
-                    />
+      {/* Habit leaderboard */}
+      <div style={{ margin: '0 16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)', marginBottom: 2 }}>Ranking</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: -0.3 }}>Strongest habits</div>
+          </div>
+        </div>
+        <div style={{ padding: '8px 14px', background: 'var(--color-card)', borderRadius: 16, border: '1px solid rgba(30,35,31,.08)', boxShadow: '0 1px 2px rgba(30,35,31,.04)' }}>
+          {topHabits.map((h, i) => {
+            const { shape, color } = getGlyphForHabit(h.emoji, h.category, h.glyphShape, h.glyphColor);
+            const rate = Math.round((h.completionDates.length / Math.max(1, Math.ceil((Date.now() - new Date(h.createdAt).getTime()) / 86400000))) * 100);
+            return (
+              <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i ? '1px solid rgba(30,35,31,.08)' : 'none' }}>
+                <div className="tnum" style={{ width: 20, fontSize: 12, fontWeight: 700, color: 'var(--color-ink-4)', textAlign: 'center' }}>{i + 1}</div>
+                <HabitGlyph shape={shape} color={color} size={34} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)' }}>{h.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-ink-3)' }} className="tnum">
+                    {Math.min(100, rate)}% · <span style={{ color: 'var(--color-terracotta)' }}>{h.currentStreak} day streak</span>
                   </div>
-                  <span className="text-xs text-muted">{d.day}</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Monthly Summary */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">
-          {getMonthName(thisMonth).toUpperCase()} SUMMARY
-        </h2>
-        <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-dark font-medium">Completion Rate</span>
-            <span className="text-sm font-bold text-forest">{monthRate}%</span>
-          </div>
-          <div className="w-full h-3 bg-cream rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${monthRate}%`, background: 'linear-gradient(to right, #A8C5B8, #2D4A3E)' }}
-            />
-          </div>
-          <p className="text-xs text-muted mt-2">
-            {monthCompletions} of {monthPossible} scheduled completions this month
-          </p>
-        </div>
-      </section>
-
-      {/* Per-Habit Stats */}
-      <section className="px-4 pt-6">
-        <h2 className="text-xs font-bold text-muted tracking-widest mb-3">HABITS BREAKDOWN</h2>
-        <div className="space-y-2">
-          {habits.map((h) => (
-            <div key={h.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
-              <span className="text-2xl">{h.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-dark truncate">{h.name}</p>
-                <p className="text-xs text-muted">{h.currentStreak > 0 ? `${h.currentStreak} day streak 🔥` : 'No active streak'}</p>
+                <div style={{ width: 64, flexShrink: 0 }}>
+                  <Sparkline values={weeklyRollup(h)} width={64} height={22} color={color} fill={`color-mix(in oklch, ${color} 20%, transparent)`} />
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-forest">{h.completionDates.length}</p>
-                <p className="text-xs text-muted">days</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </section>
+      </div>
+
+      {/* Best time of day */}
+      <div style={{ margin: '0 16px 20px', padding: 18, background: 'var(--color-card)', borderRadius: 18, border: '1px solid rgba(30,35,31,.08)', boxShadow: '0 1px 2px rgba(30,35,31,.04)' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)' }}>Habits at a glance</div>
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {habits.map(h => {
+            const { shape, color } = getGlyphForHabit(h.emoji, h.category, h.glyphShape, h.glyphColor);
+            const totalDays = Math.max(1, Math.ceil((Date.now() - new Date(h.createdAt).getTime()) / 86400000));
+            const rate = Math.min(100, Math.round((h.completionDates.length / totalDays) * 100));
+            return (
+              <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <HabitGlyph shape={shape} color={color} size={32} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>{h.name}</span>
+                    <span className="tnum" style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-ink-3)' }}>{rate}%</span>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--color-sage-100)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${rate}%`, background: color, borderRadius: 2, transition: 'width .6s' }} />
+                  </div>
+                </div>
+                {h.currentStreak > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--color-terracotta)', flexShrink: 0 }} className="tnum">
+                    <IconFlame size={12} />{h.currentStreak}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
