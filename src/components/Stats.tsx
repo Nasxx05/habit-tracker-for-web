@@ -1,5 +1,5 @@
 import { useHabits } from '../context/HabitContext';
-import { getToday, formatDate } from '../utils/dateHelpers';
+import { formatDate } from '../utils/dateHelpers';
 import { BarRow, Sparkline } from './DataViz';
 import HabitGlyph, { getGlyphForHabit } from './HabitGlyph';
 import { IconTrending, IconFlame, IconSparkle } from './Icons';
@@ -23,7 +23,6 @@ function KPI({ label, value, unit, delta, up, accent }: { label: string; value: 
 
 export default function Stats() {
   const { habits, setCurrentView } = useHabits();
-  const todayStr = getToday();
 
   if (habits.length === 0) {
     return (

@@ -5,7 +5,7 @@ import UpgradeModal from './UpgradeModal';
 import HabitGlyph, { GLYPH_SHAPES, GLYPH_COLORS, getGlyphForHabit } from './HabitGlyph';
 import type { GlyphShape } from './HabitGlyph';
 import type { HabitTemplate } from '../types/habit';
-import { IconClose, IconClock, IconRepeat, IconBell, IconChevronR } from './Icons';
+import { IconClose, IconClock } from './Icons';
 
 const CATEGORIES = ['General', 'Health', 'Fitness', 'Mindfulness', 'Learning', 'Productivity', 'Self-care', 'Social'];
 const DAY_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];

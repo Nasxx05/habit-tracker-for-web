@@ -230,7 +230,7 @@ export default function HabitDetail() {
 
       <EditHabitModal isOpen={showEdit} onClose={() => setShowEdit(false)} habit={habit} />
       <ShareCardModal isOpen={showShare} onClose={() => setShowShare(false)} habit={habit} />
-      <UpgradeModal isOpen={showShareUpgrade} onClose={() => setShowShareUpgrade(false)} feature="share" />
+      <UpgradeModal isOpen={showShareUpgrade} onClose={() => setShowShareUpgrade(false)} />
     </div>
   );
 }
