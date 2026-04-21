@@ -2,18 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useHabits } from '../context/HabitContext';
 import { usePremium, FREE_HABIT_LIMIT } from '../context/PremiumContext';
 import UpgradeModal from './UpgradeModal';
+import HabitGlyph, { GLYPH_SHAPES, GLYPH_COLORS, getGlyphForHabit } from './HabitGlyph';
+import type { GlyphShape } from './HabitGlyph';
 import type { HabitTemplate } from '../types/habit';
-
-const EMOJI_OPTIONS = [
-  '💪', '📚', '🏃', '💧', '🧘', '✍️', '🎯',
-  '🎨', '🎵', '🌱', '🔥', '⭐', '💡', '❤️',
-  '🍎', '😴', '🚶', '🧹', '💊', '🙏',
-  '📝', '🎸', '🏋️', '🚴', '🧠', '📱', '🐕', '🍳',
-];
+import { IconClose, IconClock, IconRepeat, IconBell, IconChevronR } from './Icons';
 
 const CATEGORIES = ['General', 'Health', 'Fitness', 'Mindfulness', 'Learning', 'Productivity', 'Self-care', 'Social'];
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const COLOR_PALETTE = ['#2D4A3E', '#A8C5B8', '#E8985E', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#10B981', '#06B6D4'];
+const DAY_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 const TEMPLATES: HabitTemplate[] = [
   { name: 'Drink Water', emoji: '💧', category: 'Health', target: '8 glasses', schedule: [0, 1, 2, 3, 4, 5, 6] },
@@ -35,16 +30,25 @@ interface AddHabitModalProps {
   onClose: () => void;
 }
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--color-ink-4)', padding: '0 2px' }}>
+      {children}
+    </div>
+  );
+}
+
 export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   const { addHabit, habits } = useHabits();
   const { isPremium } = usePremium();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [name, setName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('💪');
+  const [selectedShape, setSelectedShape] = useState<GlyphShape>('disc');
+  const [selectedColor, setSelectedColor] = useState(GLYPH_COLORS[0].value);
   const [category, setCategory] = useState('General');
   const [target, setTarget] = useState('');
   const [targetCount, setTargetCount] = useState<string>('');
-  const [color, setColor] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [reminderTime, setReminderTime] = useState('');
   const [showTemplates, setShowTemplates] = useState(true);
@@ -65,6 +69,9 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
   const applyTemplate = (template: HabitTemplate) => {
     setName(template.name);
     setSelectedEmoji(template.emoji);
+    const { shape, color } = getGlyphForHabit(template.emoji, template.category);
+    setSelectedShape(shape);
+    setSelectedColor(color);
     setCategory(template.category);
     setTarget(template.target);
     setSchedule(template.schedule);
@@ -76,6 +83,19 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
     setSchedule((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
     );
+  };
+
+  const reset = () => {
+    setName('');
+    setSelectedEmoji('💪');
+    setSelectedShape('disc');
+    setSelectedColor(GLYPH_COLORS[0].value);
+    setCategory('General');
+    setTarget('');
+    setTargetCount('');
+    setSchedule([0, 1, 2, 3, 4, 5, 6]);
+    setReminderTime('');
+    setShowTemplates(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,17 +115,11 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
       schedule,
       reminderTime || null,
       Number.isFinite(tc) && tc > 0 ? tc : null,
-      isPremium ? color : null
+      null,
+      selectedShape,
+      selectedColor,
     );
-    setName('');
-    setSelectedEmoji('💪');
-    setCategory('General');
-    setTarget('');
-    setTargetCount('');
-    setColor(null);
-    setSchedule([0, 1, 2, 3, 4, 5, 6]);
-    setReminderTime('');
-    setShowTemplates(true);
+    reset();
     onClose();
   };
 
@@ -115,190 +129,244 @@ export default function AddHabitModal({ isOpen, onClose }: AddHabitModalProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 animate-fade-in"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 }}
+      className="animate-fade-in"
+      onClick={(e) => { if (e.target === e.currentTarget) { reset(); onClose(); } }}
     >
-      <div className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-md p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-5">
-          <h2 className="text-xl font-bold text-dark">Add New Habit</h2>
-          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-mint text-muted text-xl transition cursor-pointer">×</button>
+      <div
+        style={{ background: 'var(--color-bg)', width: '100%', maxWidth: 480, borderRadius: '24px 24px 0 0', maxHeight: '92dvh', overflowY: 'auto', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}
+        className="animate-slide-up no-scrollbar"
+      >
+        {/* Header */}
+        <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--color-bg)', zIndex: 2, borderBottom: '1px solid rgba(30,35,31,.06)' }}>
+          <button onClick={() => { reset(); onClose(); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-ink-2)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <IconClose size={16} />Cancel
+          </button>
+          <div style={{ fontSize: 11, color: 'var(--color-ink-3)', letterSpacing: '.1em', fontWeight: 700, textTransform: 'uppercase' }}>New Habit</div>
+          <button
+            onClick={handleSubmit as unknown as React.MouseEventHandler}
+            disabled={!name.trim()}
+            style={{ background: name.trim() ? 'var(--color-forest)' : 'var(--color-sage-100)', color: name.trim() ? '#F5F2E8' : 'var(--color-ink-4)', border: 'none', borderRadius: 999, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: name.trim() ? 'pointer' : 'default', transition: 'all .2s' }}
+          >
+            Save
+          </button>
+        </div>
+
+        {/* Identity preview */}
+        <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <HabitGlyph shape={selectedShape} color={selectedColor} size={64} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: 'var(--color-ink-3)', letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 600 }}>Preview</div>
+            <div className="font-serif" style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-ink)', letterSpacing: -0.4, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {name || 'Habit name'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--color-ink-3)', marginTop: 2 }}>{target || category}</div>
+          </div>
         </div>
 
         {/* Quick Templates */}
         {showTemplates && (
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-semibold text-dark">Quick Start</label>
-              <button onClick={() => setShowTemplates(false)} className="text-xs text-muted hover:text-forest cursor-pointer">Custom →</button>
+          <div style={{ padding: '4px 16px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <FieldLabel>Quick start</FieldLabel>
+              <button onClick={() => setShowTemplates(false)} style={{ fontSize: 11, color: 'var(--color-ink-3)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Custom →</button>
             </div>
-            <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.name}
-                  onClick={() => applyTemplate(t)}
-                  className="flex items-center gap-2 p-3 bg-mint rounded-xl hover:bg-sage-light transition cursor-pointer text-left"
-                >
-                  <span className="text-xl">{t.emoji}</span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-dark truncate">{t.name}</p>
-                    <p className="text-xs text-muted truncate">{t.target}</p>
-                  </div>
-                </button>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, maxHeight: 180, overflowY: 'auto' }} className="no-scrollbar">
+              {TEMPLATES.map((t) => {
+                const { shape, color } = getGlyphForHabit(t.emoji, t.category);
+                return (
+                  <button key={t.name} onClick={() => applyTemplate(t)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.08)', borderRadius: 14, cursor: 'pointer', textAlign: 'left' }}>
+                    <HabitGlyph shape={shape} color={color} size={32} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--color-ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.target}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Habit Name</label>
+        <form onSubmit={handleSubmit} style={{ padding: '0 0 8px' }}>
+
+          {/* Name */}
+          <div style={{ padding: '4px 16px 12px' }}>
+            <FieldLabel>Name</FieldLabel>
             <input
               ref={inputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Morning Meditation"
-              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
               maxLength={50}
+              style={{
+                marginTop: 8, width: '100%', padding: '14px 16px',
+                background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.10)',
+                borderRadius: 14, fontSize: 15, color: 'var(--color-ink)',
+                outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Icon</label>
-            <div className="grid grid-cols-7 gap-1.5">
-              {EMOJI_OPTIONS.map((emoji) => (
+          {/* Shape picker */}
+          <div style={{ padding: '4px 16px 12px' }}>
+            <FieldLabel>Shape</FieldLabel>
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }} className="no-scrollbar">
+              {GLYPH_SHAPES.map((s) => (
                 <button
-                  key={emoji}
+                  key={s}
                   type="button"
-                  onClick={() => setSelectedEmoji(emoji)}
-                  className={`text-2xl p-1.5 rounded-lg transition cursor-pointer ${
-                    selectedEmoji === emoji ? 'bg-mint ring-2 ring-sage' : 'hover:bg-cream'
-                  }`}
+                  onClick={() => setSelectedShape(s)}
+                  style={{
+                    width: 52, height: 52, flexShrink: 0, borderRadius: 14,
+                    border: selectedShape === s ? '2px solid var(--color-forest)' : '1px solid rgba(30,35,31,.10)',
+                    background: 'var(--color-card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
                 >
-                  {emoji}
+                  <HabitGlyph shape={s} color={selectedShape === s ? selectedColor : 'var(--color-ink-3)'} size={28} tile={false} />
                 </button>
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Category</label>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((c) => (
-                <button key={c} type="button" onClick={() => setCategory(c)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition cursor-pointer ${
-                    category === c ? 'bg-forest text-white' : 'bg-mint text-forest hover:bg-sage-light'
-                  }`}
-                >{c}</button>
+          {/* Color picker */}
+          <div style={{ padding: '4px 16px 14px' }}>
+            <FieldLabel>Color</FieldLabel>
+            <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {GLYPH_COLORS.map((c) => (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => setSelectedColor(c.value)}
+                  style={{
+                    width: 30, height: 30, borderRadius: 15, cursor: 'pointer',
+                    background: c.value,
+                    border: selectedColor === c.value ? '3px solid var(--color-card)' : '3px solid transparent',
+                    boxShadow: selectedColor === c.value ? '0 0 0 2px var(--color-forest)' : 'none',
+                    outline: 'none',
+                  }}
+                />
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Target label (optional)</label>
+          {/* Target */}
+          <div style={{ padding: '4px 16px 12px' }}>
+            <FieldLabel>Target (optional)</FieldLabel>
             <input
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              placeholder="e.g., minutes, glasses, pages"
-              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
+              placeholder="e.g., 30 minutes, 8 glasses"
               maxLength={40}
+              style={{
+                marginTop: 8, width: '100%', padding: '14px 16px',
+                background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.10)',
+                borderRadius: 14, fontSize: 14, color: 'var(--color-ink)',
+                outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Target count (optional)</label>
+          {/* Target count */}
+          <div style={{ padding: '4px 16px 12px' }}>
+            <FieldLabel>Target count (optional)</FieldLabel>
             <input
               type="number"
               min="0"
               value={targetCount}
               onChange={(e) => setTargetCount(e.target.value)}
-              placeholder="e.g., 8 (for 8 glasses) — leave empty for simple checkbox"
-              className="w-full px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
+              placeholder="e.g., 8 — enables tap-to-increment"
+              style={{
+                marginTop: 8, width: '100%', padding: '14px 16px',
+                background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.10)',
+                borderRadius: 14, fontSize: 14, color: 'var(--color-ink)',
+                outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
             />
-            <p className="text-xs text-muted mt-1">Set a number to enable tap-to-increment (e.g. tap +1 each glass).</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">
-              Color {!isPremium && <span className="text-xs text-muted font-normal">· Premium</span>}
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => isPremium && setColor(null)}
-                disabled={!isPremium}
-                className={`w-8 h-8 rounded-full border-2 ${color === null ? 'ring-2 ring-forest' : 'border-sage-light'} ${!isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} bg-mint flex items-center justify-center text-xs`}
-              >
-                ✕
-              </button>
-              {COLOR_PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => isPremium && setColor(c)}
-                  disabled={!isPremium}
-                  className={`w-8 h-8 rounded-full ${color === c ? 'ring-2 ring-offset-2 ring-forest' : ''} ${!isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-            {!isPremium && (
-              <p className="text-xs text-muted mt-1">🔒 Upgrade to Premium to color-code your habits.</p>
-            )}
           </div>
 
           {/* Schedule */}
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Schedule</label>
-            <div className="flex gap-1.5">
-              {DAY_LABELS.map((label, i) => (
-                <button key={label} type="button" onClick={() => toggleDay(i)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                    schedule.includes(i) ? 'bg-forest text-white' : 'bg-cream text-muted'
-                  }`}
-                >{label}</button>
+          <div style={{ padding: '4px 16px 14px' }}>
+            <FieldLabel>Schedule</FieldLabel>
+            <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+              {DAY_SHORT.map((label, i) => {
+                const on = schedule.includes(i);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => toggleDay(i)}
+                    style={{
+                      flex: 1, padding: '10px 0', textAlign: 'center', borderRadius: 12,
+                      background: on ? 'var(--color-forest)' : 'var(--color-card)',
+                      border: on ? 'none' : '1px solid rgba(30,35,31,.10)',
+                      color: on ? '#F5F2E8' : 'var(--color-ink-3)',
+                      fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >{label}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Category */}
+          <div style={{ padding: '4px 16px 12px' }}>
+            <FieldLabel>Category</FieldLabel>
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }} className="no-scrollbar">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                    background: category === c ? 'var(--color-forest)' : 'var(--color-card)',
+                    color: category === c ? '#F5F2E8' : 'var(--color-ink-2)',
+                    border: category === c ? 'none' : '1px solid rgba(30,35,31,.10)',
+                    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  }}
+                >{c}</button>
               ))}
             </div>
           </div>
 
           {/* Reminder */}
-          <div>
-            <label className="block text-sm font-semibold text-dark mb-1.5">Reminder (optional)</label>
-            <div className="flex items-center gap-2">
+          <div style={{ padding: '4px 16px 16px' }}>
+            <FieldLabel>Reminder (optional)</FieldLabel>
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: 'var(--color-card)', border: '1px solid rgba(30,35,31,.10)', borderRadius: 14 }}>
+              <IconClock size={18} style={{ color: 'var(--color-ink-3)', flexShrink: 0 }} />
               <input
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="flex-1 px-4 py-3 border-2 border-sage-light rounded-xl focus:border-forest focus:outline-none transition text-dark"
+                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: 'var(--color-ink)', fontFamily: 'inherit' }}
               />
               {reminderTime && (
-                <button type="button" onClick={() => setReminderTime('')}
-                  className="text-muted hover:text-dark cursor-pointer text-sm px-2"
-                >Clear</button>
+                <button type="button" onClick={() => setReminderTime('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--color-ink-3)', fontWeight: 600 }}>Clear</button>
               )}
             </div>
-            {reminderTime && (
-              <p className="text-xs text-muted mt-1">Notification at {reminderTime} on scheduled days</p>
-            )}
           </div>
 
-          {/* Preview */}
-          <div className="p-3 bg-mint rounded-xl flex items-center gap-3">
-            <span className="text-3xl">{selectedEmoji}</span>
-            <div>
-              <span className="text-sm font-bold text-dark">{name || 'Your habit name'}</span>
-              <p className="text-xs text-muted">{target || category}</p>
-            </div>
+          {/* Submit */}
+          <div style={{ padding: '8px 16px 4px' }}>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              style={{
+                width: '100%', padding: '16px', borderRadius: 16, border: 'none',
+                background: name.trim() ? 'var(--color-forest)' : 'var(--color-sage-100)',
+                color: name.trim() ? '#F5F2E8' : 'var(--color-ink-4)',
+                fontSize: 15, fontWeight: 700, cursor: name.trim() ? 'pointer' : 'default',
+                transition: 'all .2s',
+              }}
+            >
+              Start tracking
+            </button>
           </div>
-
-          <button
-            type="submit"
-            disabled={!name.trim()}
-            className="w-full bg-forest text-white font-semibold py-3.5 rounded-xl hover:bg-forest/90 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            Create Habit
-          </button>
         </form>
       </div>
     </div>

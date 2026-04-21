@@ -53,12 +53,12 @@ interface HabitContextType {
   badgeEvent: BadgeEvent | null;
   notificationPermission: NotificationPermission | 'unsupported';
   setHasCollectedDetails: (value: boolean) => void;
-  addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null, targetCount?: number | null, color?: string | null) => void;
+  addHabit: (name: string, emoji: string, category?: string, target?: string, schedule?: number[], reminderTime?: string | null, targetCount?: number | null, color?: string | null, glyphShape?: string, glyphColor?: string) => void;
   deleteHabit: (id: string) => void;
   toggleHabit: (id: string) => void;
   incrementHabit: (id: string, delta?: number) => void;
   toggleReminder: (id: string) => void;
-  editHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'emoji' | 'category' | 'target' | 'schedule' | 'reminderTime' | 'targetCount' | 'color'>>) => void;
+  editHabit: (id: string, updates: Partial<Pick<Habit, 'name' | 'emoji' | 'category' | 'target' | 'schedule' | 'reminderTime' | 'targetCount' | 'color' | 'glyphShape' | 'glyphColor'>>) => void;
   reorderHabits: (startIndex: number, endIndex: number) => void;
   setCurrentView: (view: View) => void;
   setHasVisitedBefore: (value: boolean) => void;
@@ -409,7 +409,7 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
   }, [habits, lastNotified, setLastNotified]);
 
   const addHabit = useCallback(
-    (name: string, emoji: string, category = 'General', target = '', schedule: number[] = [0, 1, 2, 3, 4, 5, 6], reminderTime: string | null = null, targetCount: number | null = null, color: string | null = null) => {
+    (name: string, emoji: string, category = 'General', target = '', schedule: number[] = [0, 1, 2, 3, 4, 5, 6], reminderTime: string | null = null, targetCount: number | null = null, color: string | null = null, glyphShape?: string, glyphColor?: string) => {
       if (reminderTime) requestNotificationPermission();
       const newHabit: Habit = {
         id: uuidv4(),
@@ -429,6 +429,8 @@ export function HabitProvider({ children, syncUserId }: { children: ReactNode; s
         color,
         skipDates: [],
         freezeDates: [],
+        glyphShape: (glyphShape as Habit['glyphShape']) || undefined,
+        glyphColor: glyphColor || undefined,
       };
       setHabits((prev: Habit[]) => [...prev, newHabit]);
     },

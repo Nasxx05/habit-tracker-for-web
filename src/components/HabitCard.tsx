@@ -5,6 +5,9 @@ import { useHabits } from '../context/HabitContext';
 import { getToday } from '../utils/dateHelpers';
 import CompletionCelebration from './CompletionCelebration';
 import PersonalDetailsModal from './PersonalDetailsModal';
+import HabitGlyph, { getGlyphForHabit } from './HabitGlyph';
+import { TrendBars } from './DataViz';
+import { IconFlame, IconCheck, IconPlus, IconClock, IconSnowflake } from './Icons';
 
 interface HabitCardProps {
   habit: Habit;
@@ -19,7 +22,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   const wasFirstCompletionRef = useRef(false);
 
   const hasFreezeActive = habit.freezeDates && habit.freezeDates.length > 0 && habit.currentStreak > 0 && !habit.isCompletedToday;
-  const isInComeback = habit.currentStreak === 0 && habit.longestStreak > 2 && habit.completionDates.length > 0 && !habit.isCompletedToday;
+  const { shape, color } = getGlyphForHabit(habit.emoji, habit.category, habit.glyphShape, habit.glyphColor);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,12 +49,7 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   const isQuantitative = !!(habit.targetCount && habit.targetCount > 0);
   const todayCount = habit.progressByDate?.[today] || 0;
   const progressPct = isQuantitative ? Math.min(100, Math.round((todayCount / (habit.targetCount as number)) * 100)) : 0;
-
-  const subtitle = isQuantitative
-    ? `${todayCount}/${habit.targetCount} ${habit.target || habit.category}`
-    : habit.isCompletedToday
-      ? `${habit.target || habit.category} · Done`
-      : `${habit.target || habit.category} · Not started`;
+  const isPartialQuant = isQuantitative && !habit.isCompletedToday;
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -68,73 +66,123 @@ export default function HabitCard({ habit, tutorialTarget }: HabitCardProps) {
   return (
     <div
       onClick={handleCardClick}
-      style={habit.color ? { borderLeft: `4px solid ${habit.color}` } : undefined}
-      className={`relative bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all duration-300 ${
-        isAnimating ? 'scale-[1.02]' : ''
-      }`}
+      style={{
+        background: 'var(--color-card)',
+        borderRadius: 18,
+        padding: '14px 14px 12px',
+        boxShadow: '0 1px 2px rgba(30,35,31,.04)',
+        border: '1px solid rgba(30,35,31,.08)',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transform: isAnimating ? 'scale(1.02)' : 'none',
+        transition: 'transform .3s, box-shadow .2s',
+      }}
     >
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${habit.color ? '' : 'bg-mint'}`}
-          style={habit.color ? { backgroundColor: `${habit.color}33` } : undefined}
-        >
-          {habit.emoji}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <HabitGlyph shape={shape} color={color} size={44} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {habit.name}
+            </div>
+            {habit.currentStreak >= 7 && !hasFreezeActive && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--color-terracotta)', flexShrink: 0 }} className="tnum">
+                <IconFlame size={11} />{habit.currentStreak}
+              </div>
+            )}
+            {hasFreezeActive && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--color-ice)', flexShrink: 0 }} className="tnum">
+                <IconSnowflake size={11} />{habit.currentStreak}
+              </div>
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--color-ink-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+            {habit.target && <span>{habit.target}</span>}
+            {habit.target && habit.category && <span style={{ width: 2, height: 2, borderRadius: 1, background: 'var(--color-ink-4)', display: 'inline-block' }} />}
+            <span>{habit.category}</span>
+            {habit.reminderTime && (
+              <>
+                <span style={{ width: 2, height: 2, borderRadius: 1, background: 'var(--color-ink-4)', display: 'inline-block' }} />
+                <span className="tnum" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  <IconClock size={10} />{habit.reminderTime}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-dark truncate">{habit.name}</h3>
-          <p className="text-xs text-muted mt-0.5">{subtitle}</p>
-        </div>
-
-        <button
-          onClick={isQuantitative ? handleIncrement : handleToggle}
-          data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
-            habit.isCompletedToday
-              ? 'bg-sage text-white shadow-sm'
-              : 'border-2 border-sage-light text-sage hover:border-sage hover:bg-mint'
-          } ${isAnimating ? 'animate-bounce-once' : ''}`}
-          aria-label={isQuantitative ? 'Add one' : habit.isCompletedToday ? 'Mark as incomplete' : 'Mark as complete'}
-        >
-          {habit.isCompletedToday ? '✓' : isQuantitative ? '+1' : '+'}
-        </button>
+        {/* Complete button */}
+        {habit.isCompletedToday ? (
+          <button
+            onClick={handleToggle}
+            data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
+            style={{
+              width: 44, height: 44, borderRadius: 22,
+              background: 'var(--color-forest)',
+              color: '#F5F2E8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: 'none', cursor: 'pointer',
+              boxShadow: '0 4px 10px color-mix(in oklch, var(--color-forest) 25%, transparent)',
+              flexShrink: 0,
+            }}
+            className={isAnimating ? 'animate-bounce-once' : ''}
+          >
+            <IconCheck size={20} />
+          </button>
+        ) : isPartialQuant ? (
+          <button
+            onClick={handleIncrement}
+            data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
+            style={{
+              width: 44, height: 44, borderRadius: 22,
+              border: `1.5px solid ${color}`,
+              background: `color-mix(in oklch, ${color} 12%, transparent)`,
+              color: color,
+              fontWeight: 700, fontSize: 12,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}
+            className="tnum"
+          >
+            +1
+          </button>
+        ) : (
+          <button
+            onClick={handleToggle}
+            data-tutorial={tutorialTarget ? 'complete-btn' : undefined}
+            style={{
+              width: 44, height: 44, borderRadius: 22,
+              border: '1.5px solid rgba(30,35,31,.14)',
+              background: 'transparent',
+              color: 'var(--color-ink-3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <IconPlus size={18} />
+          </button>
+        )}
       </div>
 
-      {/* Progress bar for quantitative habits */}
-      {isQuantitative && (
-        <div className="mt-3 w-full h-1.5 bg-cream rounded-full overflow-hidden">
-          <div
-            className="h-full transition-all duration-300"
-            style={{ width: `${progressPct}%`, backgroundColor: habit.color || 'var(--color-sage)' }}
-          />
-        </div>
-      )}
+      {/* Bottom row: trend bars + count */}
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <TrendBars completedDates={habit.completionDates} schedule={habit.schedule} days={14} />
+        {isPartialQuant ? (
+          <div style={{ fontSize: 10, color: 'var(--color-ink-3)', fontWeight: 600 }} className="tnum">
+            <span style={{ color: 'var(--color-ink)', fontSize: 12, fontWeight: 700 }}>{todayCount}</span>/{habit.targetCount} today
+          </div>
+        ) : (
+          <div style={{ fontSize: 10, color: 'var(--color-ink-4)', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+            Last 14d
+          </div>
+        )}
+      </div>
 
-      {/* Streak indicator */}
-      {habit.currentStreak > 0 && (
-        <div className="mt-2 flex items-center gap-1">
-          {hasFreezeActive ? (
-            <>
-              <span className="text-xs">🧊</span>
-              <span className="text-xs font-semibold text-blue-400">{habit.currentStreak} day streak (freeze active)</span>
-            </>
-          ) : (
-            <>
-              <span className="text-xs">🔥</span>
-              <span className="text-xs font-semibold text-peach">{habit.currentStreak} day streak</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Comeback mode indicator */}
-      {isInComeback && (
-        <div className="mt-2 flex items-center gap-1">
-          <span className="text-xs">🔄</span>
-          <span className="text-xs font-semibold text-peach">
-            Get back to {habit.longestStreak} days 💪
-          </span>
-        </div>
+      {/* Partial progress underline bar */}
+      {isPartialQuant && (
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: 2, width: `${progressPct}%`, background: color, transition: 'width .5s' }} />
       )}
 
       <CompletionCelebration
